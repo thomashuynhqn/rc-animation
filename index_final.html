@@ -1,0 +1,1589 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>3D Voxel Logo - Cloud to Ring Animation</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap");
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        background: #0a0d14;
+        overflow: hidden;
+      }
+
+      .hero {
+        position: relative;
+        width: 100vw;
+        height: 100vh;
+      }
+
+      .canvas-container {
+        width: 100%;
+        height: 100%;
+      }
+
+      #voxelCanvas {
+        width: 100%;
+        height: 100%;
+        display: block;
+        cursor: crosshair;
+      }
+    </style>
+  </head>
+  <body>
+    <section class="hero">
+      <div class="canvas-container">
+        <canvas id="voxelCanvas"></canvas>
+      </div>
+    </section>
+
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+        }
+      }
+    </script>
+
+    <script type="module">
+      import * as THREE from "three";
+
+      const LOGO_PATH_CONFIG = [
+        // =========================================================
+        // STROKE 0 (Blue) – Left "C" shape
+        // =========================================================
+        {
+          strokeIndex: 0,
+          segments: [
+            {
+              type: "cubic",
+              segments: 10,
+              c0: { x: 280.68, y: 493.55 },
+              c1: { x: 271.39, y: 495.49 },
+              c2: { x: 264.7, y: 496.18 },
+              c3: { x: 252.5, y: 496.45 },
+            },
+            {
+              type: "cubic",
+              segments: 10,
+              c0: { x: 252.5, y: 496.45 },
+              c1: { x: 234.35, y: 496.85 },
+              c2: { x: 232.49, y: 496.71 },
+              c3: { x: 218.0, y: 493.9 },
+            },
+            {
+              type: "cubic",
+              segments: 10,
+              c0: { x: 218.0, y: 493.9 },
+              c1: { x: 156.62, y: 481.99 },
+              c2: { x: 107.56, y: 434.17 },
+              c3: { x: 93.44, y: 372.5 },
+            },
+            {
+              type: "cubic",
+              segments: 10,
+              c0: { x: 93.44, y: 372.5 },
+              c1: { x: 89.53, y: 355.43 },
+              c2: { x: 88.84, y: 329.02 },
+              c3: { x: 91.84, y: 311.41 },
+            },
+            {
+              type: "cubic",
+              segments: 10,
+              c0: { x: 91.84, y: 311.41 },
+              c1: { x: 103.11, y: 245.28 },
+              c2: { x: 155.02, y: 192.92 },
+              c3: { x: 221.12, y: 181.02 },
+            },
+            {
+              type: "cubic",
+              segments: 10,
+              c0: { x: 221.12, y: 181.02 },
+              c1: { x: 235.19, y: 178.49 },
+              c2: { x: 261.28, y: 178.24 },
+              c3: { x: 274.62, y: 180.51 },
+            },
+            {
+              type: "cubic",
+              segments: 10,
+              c0: { x: 274.62, y: 180.51 },
+              c1: { x: 294.88, y: 183.97 },
+              c2: { x: 319.43, y: 193.09 },
+              c3: { x: 326.15, y: 199.65 },
+            },
+            {
+              type: "cubic",
+              segments: 10,
+              c0: { x: 326.15, y: 199.65 },
+              c1: { x: 330.89, y: 204.27 },
+              c2: { x: 332.35, y: 208.52 },
+              c3: { x: 331.8, y: 216.09 },
+            },
+            {
+              type: "cubic",
+              segments: 10,
+              c0: { x: 331.8, y: 216.09 },
+              c1: { x: 331.29, y: 223.18 },
+              c2: { x: 327.76, y: 228.29 },
+              c3: { x: 320.98, y: 231.75 },
+            },
+            {
+              type: "cubic",
+              segments: 10,
+              c0: { x: 320.98, y: 231.75 },
+              c1: { x: 314.53, y: 235.04 },
+              c2: { x: 310.34, y: 234.63 },
+              c3: { x: 298.69, y: 229.57 },
+            },
+            {
+              type: "cubic",
+              segments: 10,
+              c0: { x: 298.69, y: 229.57 },
+              c1: { x: 273.87, y: 218.77 },
+              c2: { x: 250.8, y: 215.92 },
+              c3: { x: 226.01, y: 220.59 },
+            },
+            {
+              type: "cubic",
+              segments: 10,
+              c0: { x: 226.01, y: 220.59 },
+              c1: { x: 178.88, y: 229.45 },
+              c2: { x: 141.79, y: 266.53 },
+              c3: { x: 131.37, y: 315.2 },
+            },
+            {
+              type: "cubic",
+              segments: 10,
+              c0: { x: 131.37, y: 315.2 },
+              c1: { x: 129.17, y: 325.48 },
+              c2: { x: 128.91, y: 348.54 },
+              c3: { x: 130.88, y: 358.0 },
+            },
+            {
+              type: "cubic",
+              segments: 10,
+              c0: { x: 130.88, y: 358.0 },
+              c1: { x: 137.4, y: 389.24 },
+              c2: { x: 152.75, y: 414.19 },
+              c3: { x: 176.3, y: 431.83 },
+            },
+            {
+              type: "cubic",
+              segments: 10,
+              c0: { x: 176.3, y: 431.83 },
+              c1: { x: 199.15, y: 448.94 },
+              c2: { x: 221.03, y: 456.36 },
+              c3: { x: 248.5, y: 456.32 },
+            },
+            {
+              type: "cubic",
+              segments: 10,
+              c0: { x: 248.5, y: 456.32 },
+              c1: { x: 279.3, y: 456.28 },
+              c2: { x: 306.7, y: 445.66 },
+              c3: { x: 329.29, y: 425.02 },
+            },
+            {
+              type: "cubic",
+              c0: { x: 329.29, y: 425.02 },
+              c1: { x: 337.97, y: 417.08 },
+              c2: { x: 345.5, y: 415.09 },
+              c3: { x: 353.77, y: 418.55 },
+            },
+            {
+              type: "cubic",
+              c0: { x: 353.77, y: 418.55 },
+              c1: { x: 360.8, y: 421.49 },
+              c2: { x: 364.3, y: 426.18 },
+              c3: { x: 365.52, y: 434.31 },
+            },
+            {
+              type: "cubic",
+              c0: { x: 365.52, y: 434.31 },
+              c1: { x: 366.75, y: 442.46 },
+              c2: { x: 364.43, y: 446.55 },
+              c3: { x: 352.47, y: 457.36 },
+            },
+            {
+              type: "cubic",
+              c0: { x: 352.47, y: 457.36 },
+              c1: { x: 340.81, y: 467.91 },
+              c2: { x: 334.73, y: 472.19 },
+              c3: { x: 321.54, y: 479.13 },
+            },
+            {
+              type: "cubic",
+              c0: { x: 321.54, y: 479.13 },
+              c1: { x: 309.28, y: 485.59 },
+              c2: { x: 295.41, y: 490.48 },
+              c3: { x: 280.68, y: 493.55 },
+            },
+          ],
+        },
+
+        // =========================================================
+        // STROKE 1 (Blue) – Cloud + S-curve
+        // =========================================================
+        {
+          strokeIndex: 1,
+          segments: [
+            {
+              type: "cubic",
+              c0: { x: 550.5, y: 431.65 },
+              c1: { x: 546.66, y: 433.71 },
+              c2: { x: 539.6, y: 435.28 },
+              c3: { x: 537.5, y: 434.53 },
+            },
+            {
+              type: "cubic",
+              c0: { x: 537.5, y: 434.53 },
+              c1: { x: 536.95, y: 434.34 },
+              c2: { x: 535.25, y: 433.9 },
+              c3: { x: 533.72, y: 433.56 },
+            },
+            {
+              type: "cubic",
+              c0: { x: 533.72, y: 433.56 },
+              c1: { x: 529.76, y: 432.69 },
+              c2: { x: 523.56, y: 426.71 },
+              c3: { x: 519.82, y: 420.18 },
+            },
+            {
+              type: "cubic",
+              c0: { x: 519.82, y: 420.18 },
+              c1: { x: 515.17, y: 412.06 },
+              c2: { x: 503.09, y: 399.9 },
+              c3: { x: 493.13, y: 393.33 },
+            },
+            {
+              type: "cubic",
+              c0: { x: 493.13, y: 393.33 },
+              c1: { x: 477.31, y: 382.89 },
+              c2: { x: 463.24, y: 376.74 },
+              c3: { x: 444.4, y: 372.03 },
+            },
+            {
+              type: "cubic",
+              c0: { x: 444.4, y: 372.03 },
+              c1: { x: 430.65, y: 368.59 },
+              c2: { x: 423.58, y: 352.76 },
+              c3: { x: 429.94, y: 339.63 },
+            },
+            {
+              type: "cubic",
+              c0: { x: 429.94, y: 339.63 },
+              c1: { x: 433.21, y: 332.88 },
+              c2: { x: 437.38, y: 330.2 },
+              c3: { x: 450.79, y: 326.28 },
+            },
+            {
+              type: "cubic",
+              c0: { x: 450.79, y: 326.28 },
+              c1: { x: 471.84, y: 320.12 },
+              c2: { x: 484.51, y: 313.57 },
+              c3: { x: 499.04, y: 301.37 },
+            },
+            {
+              type: "cubic",
+              c0: { x: 499.04, y: 301.37 },
+              c1: { x: 519.33, y: 284.33 },
+              c2: { x: 533.68, y: 260.12 },
+              c3: { x: 539.02, y: 233.89 },
+            },
+            {
+              type: "cubic",
+              c0: { x: 539.02, y: 233.89 },
+              c1: { x: 541.29, y: 222.76 },
+              c2: { x: 541.77, y: 203.6 },
+              c3: { x: 540.05, y: 192.84 },
+            },
+            {
+              type: "cubic",
+              c0: { x: 540.05, y: 192.84 },
+              c1: { x: 532.57, y: 146.0 },
+              c2: { x: 497.94, y: 107.92 },
+              c3: { x: 451.29, y: 95.25 },
+            },
+            {
+              type: "cubic",
+              c0: { x: 451.29, y: 95.25 },
+              c1: { x: 442.24, y: 92.79 },
+              c2: { x: 440.03, y: 92.59 },
+              c3: { x: 422.0, y: 92.61 },
+            },
+            {
+              type: "cubic",
+              c0: { x: 422.0, y: 92.61 },
+              c1: { x: 404.19, y: 92.63 },
+              c2: { x: 401.66, y: 92.86 },
+              c3: { x: 392.87, y: 95.23 },
+            },
+            {
+              type: "cubic",
+              c0: { x: 392.87, y: 95.23 },
+              c1: { x: 359.36, y: 104.26 },
+              c2: { x: 331.39, y: 126.68 },
+              c3: { x: 316.79, y: 156.21 },
+            },
+            {
+              type: "cubic",
+              c0: { x: 316.79, y: 156.21 },
+              c1: { x: 313.04, y: 163.8 },
+              c2: { x: 311.06, y: 166.79 },
+              c3: { x: 310.0, y: 166.5 },
+            },
+            {
+              type: "cubic",
+              c0: { x: 310.0, y: 166.5 },
+              c1: { x: 309.17, y: 166.27 },
+              c2: { x: 303.95, y: 164.76 },
+              c3: { x: 298.39, y: 163.13 },
+            },
+            {
+              type: "cubic",
+              c0: { x: 298.39, y: 163.13 },
+              c1: { x: 292.84, y: 161.51 },
+              c2: { x: 284.74, y: 159.61 },
+              c3: { x: 280.39, y: 158.9 },
+            },
+            {
+              type: "cubic",
+              c0: { x: 280.39, y: 158.9 },
+              c1: { x: 276.05, y: 158.2 },
+              c2: { x: 272.39, y: 157.57 },
+              c3: { x: 272.26, y: 157.49 },
+            },
+            {
+              type: "cubic",
+              c0: { x: 272.26, y: 157.49 },
+              c1: { x: 271.61, y: 157.11 },
+              c2: { x: 277.49, y: 143.75 },
+              c3: { x: 282.08, y: 135.15 },
+            },
+            {
+              type: "cubic",
+              c0: { x: 282.08, y: 135.15 },
+              c1: { x: 294.59, y: 111.69 },
+              c2: { x: 312.28, y: 92.48 },
+              c3: { x: 335.31, y: 77.34 },
+            },
+            {
+              type: "cubic",
+              c0: { x: 335.31, y: 77.34 },
+              c1: { x: 396.76, y: 36.95 },
+              c2: { x: 477.68, y: 44.23 },
+              c3: { x: 531.21, y: 94.96 },
+            },
+            {
+              type: "cubic",
+              c0: { x: 531.21, y: 94.96 },
+              c1: { x: 562.23, y: 124.35 },
+              c2: { x: 578.9, y: 160.46 },
+              c3: { x: 581.62, y: 204.16 },
+            },
+            {
+              type: "cubic",
+              c0: { x: 581.62, y: 204.16 },
+              c1: { x: 582.99, y: 226.11 },
+              c2: { x: 577.35, y: 255.04 },
+              c3: { x: 567.54, y: 276.44 },
+            },
+            {
+              type: "cubic",
+              c0: { x: 567.54, y: 276.44 },
+              c1: { x: 554.84, y: 304.16 },
+              c2: { x: 532.1, y: 329.86 },
+              c3: { x: 505.32, y: 346.77 },
+            },
+            {
+              type: "cubic",
+              c0: { x: 505.32, y: 346.77 },
+              c1: { x: 502.94, y: 348.27 },
+              c2: { x: 501.01, y: 349.73 },
+              c3: { x: 501.02, y: 350.0 },
+            },
+            {
+              type: "cubic",
+              c0: { x: 501.02, y: 350.0 },
+              c1: { x: 501.04, y: 350.27 },
+              c2: { x: 504.57, y: 352.82 },
+              c3: { x: 508.87, y: 355.65 },
+            },
+            {
+              type: "cubic",
+              c0: { x: 508.87, y: 355.65 },
+              c1: { x: 520.01, y: 362.99 },
+              c2: { x: 536.0, y: 376.07 },
+              c3: { x: 542.03, y: 382.77 },
+            },
+            {
+              type: "cubic",
+              c0: { x: 542.03, y: 382.77 },
+              c1: { x: 552.73, y: 394.66 },
+              c2: { x: 559.97, y: 407.49 },
+              c3: { x: 559.99, y: 414.57 },
+            },
+            {
+              type: "cubic",
+              c0: { x: 559.99, y: 414.57 },
+              c1: { x: 560.01, y: 420.76 },
+              c2: { x: 555.42, y: 429.0 },
+              c3: { x: 550.5, y: 431.65 },
+            },
+          ],
+        },
+
+        // =========================================================
+        // STROKE 2 (Dark) – Right "D" + bottom
+        // =========================================================
+        {
+          strokeIndex: 2,
+          segments: [
+            {
+              type: "cubic",
+              c0: { x: 599.5, y: 494.2 },
+              c1: { x: 654.95, y: 480.58 },
+              c2: { x: 695.66, y: 445.71 },
+              c3: { x: 716.07, y: 394.32 },
+            },
+            {
+              type: "cubic",
+              c0: { x: 716.07, y: 394.32 },
+              c1: { x: 722.72, y: 377.58 },
+              c2: { x: 726.08, y: 358.32 },
+              c3: { x: 726.07, y: 337.0 },
+            },
+            {
+              type: "cubic",
+              c0: { x: 726.07, y: 337.0 },
+              c1: { x: 726.02, y: 266.1 },
+              c2: { x: 677.94, y: 203.25 },
+              c3: { x: 609.12, y: 184.13 },
+            },
+
+            {
+              type: "line",
+              from: { x: 609.12, y: 184.13 },
+              to: { x: 601.75, y: 182.08 },
+            },
+            {
+              type: "line",
+              from: { x: 601.75, y: 182.08 },
+              to: { x: 602.37, y: 186.29 },
+            },
+
+            {
+              type: "cubic",
+              c0: { x: 602.37, y: 186.29 },
+              c1: { x: 602.72, y: 188.61 },
+              c2: { x: 603.29, y: 198.16 },
+              c3: { x: 603.65, y: 207.52 },
+            },
+
+            {
+              type: "line",
+              from: { x: 603.65, y: 207.52 },
+              to: { x: 604.3, y: 224.54 },
+            },
+            {
+              type: "line",
+              from: { x: 604.3, y: 224.54 },
+              to: { x: 611.4, y: 227.38 },
+            },
+
+            {
+              type: "cubic",
+              c0: { x: 611.4, y: 227.38 },
+              c1: { x: 641.81, y: 239.56 },
+              c2: { x: 666.79, y: 265.29 },
+              c3: { x: 678.57, y: 296.58 },
+            },
+            {
+              type: "cubic",
+              c0: { x: 678.57, y: 296.58 },
+              c1: { x: 686.97, y: 318.91 },
+              c2: { x: 688.21, y: 345.79 },
+              c3: { x: 681.9, y: 368.72 },
+            },
+            {
+              type: "cubic",
+              c0: { x: 681.9, y: 368.72 },
+              c1: { x: 676.08, y: 389.86 },
+              c2: { x: 665.53, y: 407.48 },
+              c3: { x: 649.35, y: 423.06 },
+            },
+            {
+              type: "cubic",
+              c0: { x: 649.35, y: 423.06 },
+              c1: { x: 632.79, y: 439.02 },
+              c2: { x: 616.56, y: 447.98 },
+              c3: { x: 593.0, y: 454.18 },
+            },
+            {
+              type: "cubic",
+              c0: { x: 593.0, y: 454.18 },
+              c1: { x: 584.52, y: 456.42 },
+              c2: { x: 584.31, y: 456.42 },
+              c3: { x: 485.28, y: 456.75 },
+            },
+
+            {
+              type: "line",
+              from: { x: 485.28, y: 456.75 },
+              to: { x: 386.06, y: 457.07 },
+            },
+            {
+              type: "line",
+              from: { x: 386.06, y: 457.07 },
+              to: { x: 373.46, y: 469.04 },
+            },
+
+            {
+              type: "cubic",
+              c0: { x: 373.46, y: 469.04 },
+              c1: { x: 361.69, y: 480.21 },
+              c2: { x: 348.29, y: 490.73 },
+              c3: { x: 341.09, y: 494.45 },
+            },
+            {
+              type: "cubic",
+              c0: { x: 341.09, y: 494.45 },
+              c1: { x: 339.39, y: 495.33 },
+              c2: { x: 338.0, y: 496.28 },
+              c3: { x: 338.0, y: 496.56 },
+            },
+            {
+              type: "cubic",
+              c0: { x: 338.0, y: 496.56 },
+              c1: { x: 338.0, y: 496.83 },
+              c2: { x: 394.81, y: 496.91 },
+              c3: { x: 464.25, y: 496.73 },
+            },
+
+            {
+              type: "line",
+              from: { x: 464.25, y: 496.73 },
+              to: { x: 590.5, y: 496.41 },
+            },
+            {
+              type: "line",
+              from: { x: 590.5, y: 496.41 },
+              to: { x: 599.5, y: 494.2 },
+            },
+          ],
+        },
+      ];
+
+      const CLOUD_SHAPE = [
+        {
+          type: "cubic",
+          c0: { x: 510.61, y: 302.12 },
+          c1: { x: 511.85, y: 340.45 },
+          c2: { x: 511.67, y: 330.27 },
+          c3: { x: 510.46, y: 335.89 },
+        },
+        {
+          type: "cubic",
+          c0: { x: 510.46, y: 335.89 },
+          c1: { x: 502.82, y: 371.1 },
+          c2: { x: 477.35, y: 397.98 },
+          c3: { x: 442.86, y: 407.22 },
+        },
+        {
+          type: "cubic",
+          segments: 20,
+          c0: { x: 442.86, y: 407.22 },
+          c1: { x: 142.94, y: 410.02 },
+          c2: { x: 94.95, y: 409.8 },
+          c3: { x: 88.04, y: 408.96 },
+        },
+        {
+          type: "cubic",
+          c0: { x: 88.04, y: 408.96 },
+          c1: { x: 42.67, y: 403.42 },
+          c2: { x: 6.27, y: 367.0 },
+          c3: { x: 1.12, y: 322.0 },
+        },
+        {
+          type: "cubic",
+          c0: { x: 1.12, y: 322.0 },
+          c1: { x: 0.97, y: 300.14 },
+          c2: { x: 0.98, y: 300.09 },
+          c3: { x: 0.99, y: 300.0 },
+        },
+        {
+          type: "cubic",
+          c0: { x: 0.99, y: 300.0 },
+          c1: { x: 2.6, y: 285.17 },
+          c2: { x: 8.4, y: 269.68 },
+          c3: { x: 17.43, y: 256.1 },
+        },
+        {
+          type: "cubic",
+          c0: { x: 17.43, y: 256.1 },
+          c1: { x: 26.21, y: 242.9 },
+          c2: { x: 44.59, y: 227.8 },
+          c3: { x: 59.7, y: 221.38 },
+        },
+        {
+          type: "cubic",
+          c0: { x: 59.7, y: 221.38 },
+          c1: { x: 65.46, y: 218.93 },
+          c2: { x: 66.01, y: 218.43 },
+          c3: { x: 66.52, y: 215.11 },
+        },
+        {
+          type: "cubic",
+          c0: { x: 66.52, y: 215.11 },
+          c1: { x: 71.31, y: 184.17 },
+          c2: { x: 89.21, y: 162.44 },
+          c3: { x: 117.0, y: 153.84 },
+        },
+        {
+          type: "cubic",
+          c0: { x: 117.0, y: 153.84 },
+          c1: { x: 128.5, y: 150.28 },
+          c2: { x: 144.44, y: 150.5 },
+          c3: { x: 156.26, y: 154.37 },
+        },
+        {
+          type: "cubic",
+          c0: { x: 156.26, y: 154.37 },
+          c1: { x: 173.72, y: 162.48 },
+          c2: { x: 176.39, y: 164.0 },
+          c3: { x: 176.56, y: 164.0 },
+        },
+        {
+          type: "cubic",
+          c0: { x: 176.56, y: 164.0 },
+          c1: { x: 200.84, y: 123.29 },
+          c2: { x: 230.53, y: 100.63 },
+          c3: { x: 264.71, y: 91.86 },
+        },
+        {
+          type: "cubic",
+          c0: { x: 264.71, y: 91.86 },
+          c1: { x: 285.33, y: 86.56 },
+          c2: { x: 311.47, y: 86.7 },
+          c3: { x: 331.91, y: 92.21 },
+        },
+        {
+          type: "cubic",
+          c0: { x: 331.91, y: 92.21 },
+          c1: { x: 389.41, y: 107.71 },
+          c2: { x: 429.55, y: 158.15 },
+          c3: { x: 431.61, y: 217.5 },
+        },
+
+        // {
+        //   type: "line",
+        //   from: { x: 432.03, y: 229.5 },
+        //   to: { x: 438.26, y: 230.76 },
+        // },
+        {
+          type: "cubic",
+          c0: { x: 438.26, y: 230.76 },
+          c1: { x: 460.62, y: 235.28 },
+          c2: { x: 479.01, y: 246.18 },
+          c3: { x: 492.46, y: 262.88 },
+        },
+        {
+          type: "cubic",
+          c0: { x: 492.46, y: 262.88 },
+          c1: { x: 501.73, y: 274.39 },
+          c2: { x: 509.02, y: 290.16 },
+          c3: { x: 510.61, y: 302.12 },
+        },
+      ];
+
+      export const CLOUD_PATH_CONFIG = [
+        {
+          strokeIndex: 0,
+          segments: [...CLOUD_SHAPE],
+        },
+        {
+          strokeIndex: 1,
+          segments: [...CLOUD_SHAPE],
+        },
+        {
+          strokeIndex: 2,
+          segments: [...CLOUD_SHAPE],
+        },
+      ];
+
+      // ============================================
+      // Load symbols.png as ASCII Texture
+      // ============================================
+      function loadSymbolsTexture() {
+        return new Promise((resolve) => {
+          const loader = new THREE.TextureLoader();
+          loader.load(
+            "symbols.png",
+            (texture) => {
+              texture.minFilter = THREE.LinearFilter;
+              texture.magFilter = THREE.LinearFilter;
+              resolve({ texture, spriteCount: 10 });
+            },
+            undefined,
+            () => {
+              resolve(createFallbackTexture());
+            }
+          );
+        });
+      }
+
+      function createFallbackTexture() {
+        const chars = " .:-=+*#%@";
+        const charWidth = 50;
+        const charHeight = 84;
+        const canvas = document.createElement("canvas");
+        canvas.width = charWidth * chars.length;
+        canvas.height = charHeight;
+        const ctx = canvas.getContext("2d");
+
+        ctx.fillStyle = "#000";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.font = "bold 72px monospace";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillStyle = "#fff";
+
+        for (let i = 0; i < chars.length; i++) {
+          ctx.fillText(chars[i], charWidth * i + charWidth / 2, charHeight / 2);
+        }
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.minFilter = THREE.LinearFilter;
+        texture.magFilter = THREE.LinearFilter;
+        return { texture, spriteCount: chars.length };
+      }
+
+      // ============================================
+      // Easing Functions
+      // ============================================
+      const ease = {
+        cubicInOut: (t) =>
+          t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2,
+        backOut: (t) => {
+          const c1 = 1.70158;
+          const c3 = c1 + 1;
+          return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+        },
+        expoOut: (t) => (t === 1 ? 1 : 1 - Math.pow(2, -10 * t)),
+        elasticOut: (t) => {
+          if (t === 0 || t === 1) return t;
+          return (
+            Math.pow(2, -10 * t) *
+              Math.sin(((t * 10 - 0.75) * (2 * Math.PI)) / 3) +
+            1
+          );
+        },
+      };
+
+      function fit(value, inMin, inMax, outMin, outMax, easeFunc = null) {
+        let t = Math.max(0, Math.min(1, (value - inMin) / (inMax - inMin)));
+        if (easeFunc) t = easeFunc(t);
+        return outMin + (outMax - outMin) * t;
+      }
+
+      function lerp(a, b, t) {
+        return a + (b - a) * t;
+      }
+
+      // ============================================
+      // Voxel Logo Class - Cloud to Ring Animation
+      // ============================================
+      class VoxelLogo {
+        constructor(canvas) {
+          this.canvas = canvas;
+          this.mouseX = 0;
+          this.mouseY = 0;
+          this.startTime = Date.now();
+          this.voxels = [];
+          // this.appearType = "move"; // or scale
+          this.appearType = "scale"; // or scale
+          this.isTest = true;
+
+          // BRIGHTER Colors
+          this.color = new THREE.Color("#475882");
+          this.bgColor = new THREE.Color("#0F131C");
+
+          // Animation state
+          this.phase = "appear"; // appear, idle_clouds, merge, idle_logo, split
+          this.phaseStartTime = 0;
+
+          // Timing (in seconds)
+          this.timing = {
+            appear: 1,
+            idle_clouds: 1.5,
+            merge: 0.8,
+            idle_logo: 4.0,
+            split: 0.8,
+          };
+          // this.timing = {
+          //   appear: 0.1,
+          //   idle_clouds: 0.1,
+          //   merge: 0.8,
+          //   idle_logo: 0.1,
+          //   split: 0.8,
+          // };
+
+          this.init();
+        }
+
+        async init() {
+          this.renderer = new THREE.WebGLRenderer({
+            canvas: this.canvas,
+            alpha: true,
+            antialias: false,
+          });
+
+          this.scene = new THREE.Scene();
+          this.camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 10);
+          this.camera.position.z = 5;
+          this.scene.add(this.camera);
+
+          this.lightPosition = new THREE.Vector3(2, 2, 2);
+
+          this.pixelScale = 2;
+          this.highRenderTarget = new THREE.WebGLRenderTarget(1, 1, {
+            minFilter: THREE.LinearFilter,
+            magFilter: THREE.LinearFilter,
+            depthBuffer: true,
+          });
+          this.lowRenderTarget = new THREE.WebGLRenderTarget(1, 1, {
+            minFilter: THREE.LinearFilter,
+            magFilter: THREE.LinearFilter,
+          });
+
+          const { texture, spriteCount } = await loadSymbolsTexture();
+          this.asciiTexture = texture;
+          this.spriteCount = spriteCount;
+
+          this.createMaterials();
+          this.createVoxelSystem();
+          this.createPostProcessing();
+          this.bindEvents();
+          this.resize();
+          this.animate();
+        }
+
+        createMaterials() {
+          // Blue material for rings 1 & 2
+          this.blueMaterial = new THREE.ShaderMaterial({
+            uniforms: { u_lightPosition: { value: this.lightPosition } },
+            vertexShader: `
+                              varying vec3 v_worldPosition;
+                              varying vec3 v_worldNormal;
+                              varying vec3 v_viewNormal;
+                              void main() {
+                                  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                                  v_viewNormal = normalMatrix * normal;
+                                  v_worldNormal = normalize((vec4(v_viewNormal, 0.0) * viewMatrix).xyz);
+                                  v_worldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
+                              }
+                          `,
+            fragmentShader: `
+                              uniform vec3 u_lightPosition;
+                              varying vec3 v_worldPosition, v_worldNormal, v_viewNormal;
+                              void main() {
+                                  vec3 N = normalize(v_worldNormal);
+                                  vec3 L = normalize(u_lightPosition - v_worldPosition);
+                                  float shade1 = max(0.0, dot(N, L)) / (length(u_lightPosition - v_worldPosition) * 0.4);
+                                  float shade2 = max(0.0, dot(normalize(v_viewNormal), vec3(0.5773)));
+                                  gl_FragColor = vec4(shade1 * 1.2, shade2 * 1.2, 1.0, 1.0);
+                              }
+                          `,
+          });
+
+          // Dark material for ring 3
+          this.darkMaterial = new THREE.ShaderMaterial({
+            uniforms: { u_lightPosition: { value: this.lightPosition } },
+            vertexShader: `
+                              varying vec3 v_worldPosition;
+                              varying vec3 v_worldNormal;
+                              varying vec3 v_viewNormal;
+                              void main() {
+                                  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                                  v_viewNormal = normalMatrix * normal;
+                                  v_worldNormal = normalize((vec4(v_viewNormal, 0.0) * viewMatrix).xyz);
+                                  v_worldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
+                              }
+                          `,
+            fragmentShader: `
+                              uniform vec3 u_lightPosition;
+                              varying vec3 v_worldPosition, v_worldNormal, v_viewNormal;
+                              void main() {
+                                  vec3 N = normalize(v_worldNormal);
+                                  vec3 L = normalize(u_lightPosition - v_worldPosition);
+                                  float shade1 = max(0.0, dot(N, L)) / (length(u_lightPosition - v_worldPosition) * 0.5);
+                                  float shade2 = max(0.0, dot(normalize(v_viewNormal), vec3(0.5773)));
+                                  gl_FragColor = vec4(shade1 * 0.3, shade2 * 0.3, shade2 * 0.4 + 0.2, 1.0);
+                              }
+                          `,
+          });
+        }
+
+        createVoxelSystem() {
+          this.logoContainer = new THREE.Object3D();
+          this.logoOuterContainer = new THREE.Object3D();
+
+          const boxGeometry = new THREE.BoxGeometry(1, 1, 1);
+
+          // Generate positions for 3 interlocking rings (logo form)
+          const offsetX = 380;
+          var centerRingByStrokeIndex = [
+            { x: -100 + offsetX, y: 0 },
+            { x: -85 + offsetX, y: -40 },
+            { x: 0 + offsetX, y: 0 },
+          ];
+          const ringVoxels = this.generateItemPositions(
+            LOGO_PATH_CONFIG,
+            12,
+            centerRingByStrokeIndex,
+            true
+          );
+
+          // Generate positions for 3 clouds
+          const tmp = 3;
+          var centerCloudByStrokeIndex = [
+            { x: 200, y: -130 },
+            { x: 70, y: 60 },
+            { x: 380, y: 50 },
+          ];
+          const centerCloudByStrokeIndexScaled = centerCloudByStrokeIndex.map(
+            (p) => ({
+              x: p.x * tmp,
+              y: p.y * tmp,
+            })
+          );
+          const cloudVoxels = this.generateItemPositions(
+            CLOUD_PATH_CONFIG,
+            6,
+            centerCloudByStrokeIndexScaled
+          );
+          // const cloudVoxels = this.generateCloudPositions();
+
+          // Create voxel objects with both cloud and ring positions
+          // Stroke 1 & 2: Blue, Stroke 3: Dark
+          const materials = [
+            this.blueMaterial,
+            this.blueMaterial,
+            this.darkMaterial,
+          ];
+
+          for (let groupIndex = 0; groupIndex < 3; groupIndex++) {
+            const ringPositions = ringVoxels[groupIndex];
+            const cloudPositions = cloudVoxels[groupIndex];
+            const material = materials[groupIndex];
+
+            // Match voxel counts
+            const maxCount = Math.max(
+              ringPositions.length,
+              cloudPositions.length
+            );
+
+            for (let i = 0; i < maxCount; i++) {
+              const ringPos = ringPositions[i % ringPositions.length];
+              const cloudPos = cloudPositions[i % cloudPositions.length];
+
+              const mesh = new THREE.Mesh(boxGeometry, material);
+              const container = new THREE.Object3D();
+              container.add(mesh);
+              this.logoContainer.add(container);
+
+              this.voxels.push({
+                container,
+                mesh,
+                groupIndex,
+                cloudPos: { ...cloudPos },
+                ringPos: { ...ringPos },
+                currentPos: { ...cloudPos },
+                scale: 0,
+                delay: groupIndex * 0.3 + i * 0.01,
+              });
+            }
+          }
+
+          this.logoContainer.scale.setScalar(0.18);
+          this.logoOuterContainer.add(this.logoContainer);
+          this.scene.add(this.logoOuterContainer);
+        }
+        generateItemPositions(
+          configs,
+          defaultScale = 12,
+          centerByStrokeIndex = [],
+          customZ = false
+        ) {
+          const strokes = [[], [], []];
+          const voxelSize = 0.07;
+
+          // SVG viewBox: 0 0 826 547, center at ~413, 273
+          // Scale and transform SVG coords to our coordinate system
+          const svgWidth = 826;
+          const svgHeight = 547;
+          const scale = defaultScale / svgWidth; // Scale to fit in ~6 units
+          const offsetX = -svgWidth / 2;
+          const offsetY = -svgHeight / 2;
+
+          const transformX = (x) => (x + offsetX) * scale;
+          const transformY = (y) => -(y + offsetY) * scale; // Flip Y axis
+
+          // Helper: Add voxel to stroke (2D, flat)
+          const addVoxel = (x, y, strokeIndex) => {
+            const rangeLimit = 0.01;
+            // const rangeLimit = 1;
+            const vx = Math.round(x / voxelSize) * voxelSize;
+            const vy = Math.round(y / voxelSize) * voxelSize;
+
+            if (
+              !strokes[strokeIndex].some(
+                (p) =>
+                  Math.abs(p.x - vx) < rangeLimit &&
+                  Math.abs(p.y - vy) < rangeLimit
+              )
+            ) {
+              strokes[strokeIndex].push({
+                x: vx,
+                y: vy,
+                z: customZ ? (strokeIndex < 2 ? 1 : 0) : 1,
+                size: voxelSize,
+              });
+            }
+          };
+
+          // Helper: Cubic bezier point
+          const cubicBezier = (p0, p1, p2, p3, t) => {
+            const mt = 1 - t;
+            return {
+              x:
+                mt * mt * mt * p0.x +
+                3 * mt * mt * t * p1.x +
+                3 * mt * t * t * p2.x +
+                t * t * t * p3.x,
+              y:
+                mt * mt * mt * p0.y +
+                3 * mt * mt * t * p1.y +
+                3 * mt * t * t * p2.y +
+                t * t * t * p3.y,
+            };
+          };
+
+          // Helper: Generate cubic bezier curve
+          const generateCubicBezier = ({
+            c0,
+            c1,
+            c2,
+            c3,
+            strokeIndex,
+            segments = 10,
+          }) => {
+            const p0 = {
+              x: transformX(c0.x + centerByStrokeIndex[strokeIndex].x),
+              y: transformY(c0.y + centerByStrokeIndex[strokeIndex].y),
+            };
+            const p1 = {
+              x: transformX(c1.x + centerByStrokeIndex[strokeIndex].x),
+              y: transformY(c1.y + centerByStrokeIndex[strokeIndex].y),
+            };
+            const p2 = {
+              x: transformX(c2.x + centerByStrokeIndex[strokeIndex].x),
+              y: transformY(c2.y + centerByStrokeIndex[strokeIndex].y),
+            };
+            const p3 = {
+              x: transformX(c3.x + centerByStrokeIndex[strokeIndex].x),
+              y: transformY(c3.y + centerByStrokeIndex[strokeIndex].y),
+            };
+
+            // addVoxel(0, 0, strokeIndex);
+
+            for (let i = 0; i <= segments; i++) {
+              const t = i / segments;
+              const pt = cubicBezier(p0, p1, p2, p3, t);
+
+              addVoxel(pt.x, pt.y, strokeIndex);
+            }
+            return { x: c3.x, y: c3.y };
+          };
+
+          // Helper: Generate line
+          const generateLine = (
+            fx0,
+            fy0,
+            fx1,
+            fy1,
+            strokeIndex,
+            segments = 6
+          ) => {
+            const x0 = fx0 + centerByStrokeIndex[strokeIndex].x;
+            const y0 = fy0 + centerByStrokeIndex[strokeIndex].y;
+            const x1 = fx1 + centerByStrokeIndex[strokeIndex].x;
+            const y1 = fy1 + centerByStrokeIndex[strokeIndex].y;
+            for (let i = 0; i <= segments; i++) {
+              const t = i / segments;
+
+              addVoxel(
+                transformX(x0 + (x1 - x0) * t),
+                transformY(y0 + (y1 - y0) * t),
+                strokeIndex
+              );
+            }
+            return { x: x1, y: y1 };
+          };
+
+          // ============================================
+          // STROKE 0 (Blue): First path from SVG - Left C + Top bump + S-curve
+          // Path: M 550.50 431.65 C... (the complex blue shape)
+          // ============================================
+          let pos = null;
+
+          for (const stroke of configs) {
+            const { strokeIndex, segments } = stroke;
+
+            for (const seg of segments) {
+              if (seg.type === "cubic") {
+                pos = generateCubicBezier({
+                  c0: seg.c0,
+                  c1: seg.c1,
+                  c2: seg.c2,
+                  c3: seg.c3,
+                  strokeIndex,
+                  segments: seg.segments ?? 10, // default
+                });
+              }
+
+              if (seg.type === "line") {
+                generateLine(
+                  seg.from.x,
+                  seg.from.y,
+                  seg.to.x,
+                  seg.to.y,
+                  strokeIndex
+                );
+                pos = seg.to;
+              }
+            }
+          }
+
+          return strokes;
+        }
+
+        // Bezier curve helper function
+        bezierCurve(points, segments) {
+          const result = [];
+          for (let i = 0; i <= segments; i++) {
+            const t = i / segments;
+            const point = this.bezierPoint(points, t);
+            result.push(point);
+          }
+          return result;
+        }
+
+        bezierPoint(points, t) {
+          if (points.length === 1) return points[0];
+
+          const newPoints = [];
+          for (let i = 0; i < points.length - 1; i++) {
+            newPoints.push({
+              x: points[i].x + (points[i + 1].x - points[i].x) * t,
+              y: points[i].y + (points[i + 1].y - points[i].y) * t,
+              z: points[i].z + (points[i + 1].z - points[i].z) * t,
+            });
+          }
+          return this.bezierPoint(newPoints, t);
+        }
+
+        generateCloudPositions() {
+          const clouds = [[], [], []];
+          const voxelSize = 0.6;
+
+          return clouds;
+        }
+
+        createPostProcessing() {
+          const quadGeometry = new THREE.PlaneGeometry(2, 2);
+
+          this.postMaterial = new THREE.ShaderMaterial({
+            uniforms: {
+              u_sceneTexture: { value: this.lowRenderTarget.texture },
+              u_sceneTextureSize: { value: new THREE.Vector2(1, 1) },
+              u_texture: { value: this.asciiTexture },
+              u_textureSpriteCount: { value: this.spriteCount },
+              u_bgColor: { value: this.bgColor },
+              u_color: { value: this.color },
+              u_mouseXY: { value: new THREE.Vector2(0, 0) },
+              u_resolution: { value: new THREE.Vector2(1, 1) },
+              u_brightness: { value: 1.7 },
+            },
+            vertexShader: `
+                              varying vec2 v_uv;
+                              void main() {
+                                  v_uv = uv;
+                                  gl_Position = vec4(position, 1.0);
+                              }
+                          `,
+            fragmentShader: `
+                              precision highp float;
+
+                              uniform sampler2D u_sceneTexture;
+                              uniform vec2 u_sceneTextureSize;
+                              uniform sampler2D u_texture;
+                              uniform float u_textureSpriteCount;
+                              uniform vec3 u_bgColor;
+                              uniform vec3 u_color;
+                              uniform vec2 u_mouseXY;
+                              uniform vec2 u_resolution;
+                              uniform float u_brightness;
+
+                              varying vec2 v_uv;
+
+                              void main() {
+                                  vec2 pixelXY = v_uv * u_sceneTextureSize;
+                                  vec2 uv = fract(pixelXY);
+
+                                  vec3 pixelRGB = texture2D(u_sceneTexture, floor(pixelXY) / u_sceneTextureSize).rgb;
+                                  float luma = max(pixelRGB.g, (1.0 - pixelRGB.b) * 0.5);
+
+                                  float spriteIndex = floor(min(u_textureSpriteCount * luma, u_textureSpriteCount - 1.0));
+
+
+                                  vec2 spriteUV = vec2((uv.x + spriteIndex) / u_textureSpriteCount, uv.y);
+
+                                  float sprite = texture2D(u_texture, spriteUV).g;
+
+                                  float dist = length(u_mouseXY - vec2(v_uv.x, 1.0 - v_uv.y) * u_resolution);
+                                  float distRatio = smoothstep(0.8, 0.0, dist / u_resolution.y) * pixelRGB.r;
+
+                                  vec2 fw = fwidth(uv);
+                                  sprite *= 1.0 - min(1.0, fw.x + fw.y);
+                                  sprite = smoothstep(0.0, 1.0, sprite * 1.8);
+
+                                  // BRIGHTER output
+                                  vec3 brightColor = u_color * u_brightness * (1.0 + distRatio * 3.0);
+                                  gl_FragColor = vec4(mix(u_bgColor, min(vec3(1.0), brightColor), sprite), 1.0);
+                              }
+                          `,
+            extensions: { derivatives: true },
+          });
+
+          this.postQuad = new THREE.Mesh(quadGeometry, this.postMaterial);
+        }
+
+        bindEvents() {
+          window.addEventListener("resize", () => this.resize());
+
+          this.canvas.addEventListener("mousemove", (e) => {
+            const rect = this.canvas.getBoundingClientRect();
+            this.mouseX = e.clientX - rect.left;
+            this.mouseY = e.clientY - rect.top;
+          });
+
+          this.canvas.addEventListener("mouseleave", () => {
+            this.mouseX = this.domWidth / 2;
+            this.mouseY = this.domHeight / 2;
+          });
+        }
+
+        resize() {
+          const rect = this.canvas.getBoundingClientRect();
+          const width = rect.width;
+          const height = rect.height;
+
+          this.domWidth = width;
+          this.domHeight = height;
+
+          const pixelSize = fit(height, 400, 1000, 12, 20);
+
+          const pixelHeight = Math.ceil(height / pixelSize);
+          const pixelWidth = Math.ceil(width / ((pixelSize * 50) / 84));
+          console.log("Resize:", width, height, "Pixel size:", {
+            pixelWidth,
+            pixelHeight,
+          });
+
+          // this.lowRenderTarget.setSize(pixelWidth, pixelHeight);
+          this.lowRenderTarget.setSize(
+            pixelWidth * this.pixelScale,
+            pixelHeight * this.pixelScale
+          );
+          this.highRenderTarget.setSize(
+            pixelWidth * this.pixelScale,
+            pixelHeight * this.pixelScale
+          );
+          this.postMaterial.uniforms.u_sceneTextureSize.value.set(
+            pixelWidth,
+            pixelHeight
+          );
+
+          const dpr = Math.min(window.devicePixelRatio, 2);
+          this.renderer.setSize(width * dpr, height * dpr, false);
+          this.canvas.style.width = `${width}px`;
+          this.canvas.style.height = `${height}px`;
+
+          const aspect = width / height;
+          this.camera.left = -aspect;
+          this.camera.right = aspect;
+          this.camera.updateProjectionMatrix();
+
+          this.mouseX = width / 2;
+          this.mouseY = height / 2;
+        }
+
+        updatePhase(elapsed) {
+          const phaseTime = elapsed - this.phaseStartTime;
+
+          switch (this.phase) {
+            case "appear":
+              if (phaseTime >= this.timing.appear) {
+                this.phase = "idle_clouds";
+                this.phaseStartTime = elapsed;
+              }
+              break;
+            case "idle_clouds":
+              if (phaseTime >= this.timing.idle_clouds) {
+                this.phase = "merge";
+                this.phaseStartTime = elapsed;
+              }
+              break;
+            case "merge":
+              if (phaseTime >= this.timing.merge) {
+                this.phase = "idle_logo";
+                this.phaseStartTime = elapsed;
+              }
+              break;
+            case "idle_logo":
+              if (phaseTime >= this.timing.idle_logo) {
+                this.phase = "split";
+                this.phaseStartTime = elapsed;
+              }
+              break;
+            case "split":
+              if (phaseTime >= this.timing.split) {
+                this.phase = "idle_clouds";
+                this.phaseStartTime = elapsed;
+              }
+              break;
+          }
+
+          return phaseTime;
+        }
+
+        animate() {
+          requestAnimationFrame(() => this.animate());
+
+          const elapsed = (Date.now() - this.startTime) / 1000;
+          const phaseTime = this.updatePhase(elapsed);
+
+          // Update uniforms
+          this.postMaterial.uniforms.u_mouseXY.value.set(
+            this.mouseX,
+            this.mouseY
+          );
+          this.postMaterial.uniforms.u_resolution.value.set(
+            this.domWidth,
+            this.domHeight
+          );
+
+          // Update light
+          const normalizedX = (this.mouseX / this.domWidth) * 2 - 1;
+          const normalizedY = 1 - (this.mouseY / this.domHeight) * 2;
+          const vec = new THREE.Vector3(normalizedX, normalizedY, 0.5);
+          vec.unproject(this.camera);
+          vec.z = 5;
+          this.lightPosition.copy(vec);
+
+          // Animate voxels based on phase
+          this.voxels.forEach((voxel, index) => {
+            let targetX, targetY, targetZ, scale;
+
+            switch (this.phase) {
+              case "appear":
+                // Fly in from outside
+                const appearProgress = fit(
+                  phaseTime,
+                  voxel.delay * 0.5,
+                  voxel.delay * 0.5 + 0.8,
+                  0,
+                  1,
+                  ease.expoOut
+                );
+
+                const startOffset =
+                  this.appearType === "scale"
+                    ? { x: 0, y: 0, z: 0 }
+                    : voxel.groupIndex === 0
+                    ? { x: 0, y: 3, z: 0 }
+                    : voxel.groupIndex === 1
+                    ? { x: -4, y: 0, z: 0 }
+                    : { x: 4, y: 0, z: 0 };
+                targetX = lerp(
+                  voxel.cloudPos.x + startOffset.x,
+                  voxel.cloudPos.x,
+                  appearProgress
+                );
+                targetY = lerp(
+                  voxel.cloudPos.y + startOffset.y,
+                  voxel.cloudPos.y,
+                  appearProgress
+                );
+                targetZ = lerp(
+                  voxel.cloudPos.z + startOffset.z,
+                  voxel.cloudPos.z,
+                  appearProgress
+                );
+                scale = appearProgress;
+                break;
+
+              case "idle_clouds":
+                // Clouds idle with slight movement
+                targetX =
+                  voxel.cloudPos.x + Math.sin(elapsed * 2 + index * 0.1) * 0.03;
+                targetY =
+                  voxel.cloudPos.y +
+                  Math.cos(elapsed * 1.5 + index * 0.1) * 0.03;
+                targetZ = voxel.cloudPos.z;
+
+                // targetX = voxel.cloudPos.x;
+                // targetY = voxel.cloudPos.y;
+                // targetZ = voxel.cloudPos.z;
+                scale = 1;
+                break;
+
+              case "merge":
+                // Merge clouds into ring logo
+                const mergeProgress = fit(
+                  phaseTime,
+                  0,
+                  this.timing.merge,
+                  0,
+                  1
+                  // ease.cubicInOut
+                );
+                targetX = lerp(
+                  voxel.cloudPos.x,
+                  voxel.ringPos.x,
+                  mergeProgress
+                );
+                targetY = lerp(
+                  voxel.cloudPos.y,
+                  voxel.ringPos.y,
+                  mergeProgress
+                );
+                targetZ = lerp(
+                  voxel.cloudPos.z,
+                  voxel.ringPos.z,
+                  mergeProgress
+                );
+                scale = 1;
+                break;
+
+              case "idle_logo":
+                // Logo idle with rotation
+
+                targetX =
+                  voxel.ringPos.x + Math.sin(elapsed * 2 + index * 0.1) * 0.03;
+                targetY =
+                  voxel.ringPos.y +
+                  Math.cos(elapsed * 1.5 + index * 0.1) * 0.03;
+                targetZ = voxel.ringPos.z;
+                scale = 1;
+                break;
+
+              case "split":
+                // Split logo back to clouds
+                const splitProgress = fit(
+                  phaseTime,
+                  0,
+                  this.timing.split,
+                  0,
+                  1
+                  // ease.cubicInOut
+                );
+                targetX = lerp(
+                  voxel.ringPos.x,
+                  voxel.cloudPos.x,
+                  splitProgress
+                );
+                targetY = lerp(
+                  voxel.ringPos.y,
+                  voxel.cloudPos.y,
+                  splitProgress
+                );
+                targetZ = lerp(
+                  voxel.ringPos.z,
+                  voxel.cloudPos.z,
+                  splitProgress
+                );
+                scale = 1;
+                break;
+            }
+
+            voxel.container.position.set(targetX, targetY, targetZ);
+            // voxel.container.scale.setScalar(voxel.cloudPos.size * scale);
+            //
+            voxel.container.scale.setScalar(0.65 * scale);
+          });
+
+          // Container rotation (only during logo phase)
+          if (this.phase === "idle_logo") {
+            // rotate the logo container
+            // this.logoContainer.rotation.y = elapsed * 0.3;
+            // this.logoContainer.rotation.y = Math.PI / 2;
+          } else {
+            // Slight rotation during other phases
+            // this.logoContainer.rotation.y = Math.sin(elapsed * 0.2) * 0.1;
+          }
+
+          this.logoOuterContainer.rotation.set(-0.4, Math.PI * 0.15, 0.1);
+          this.logoOuterContainer.rotation.set(0, Math.PI * 0.15, 0.0);
+          this.logoOuterContainer.position.set(0.3, 0, 0);
+
+          // Render
+          this.renderer.setRenderTarget(this.highRenderTarget);
+          this.renderer.setClearColor(0x000000, 1);
+          this.renderer.clear();
+          this.renderer.render(this.scene, this.camera);
+
+          this.copyTexture();
+
+          this.renderer.setRenderTarget(null);
+          this.renderer.setClearColor(0x000000, 0);
+          this.renderer.clear();
+          this.renderer.render(this.postQuad, this.camera);
+        }
+
+        copyTexture() {
+          const copyMaterial = new THREE.ShaderMaterial({
+            uniforms: { tDiffuse: { value: this.highRenderTarget.texture } },
+            vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position, 1.0); }`,
+            fragmentShader: `uniform sampler2D tDiffuse; varying vec2 vUv; void main() { gl_FragColor = texture2D(tDiffuse, vUv); }`,
+          });
+
+          const copyQuad = new THREE.Mesh(
+            new THREE.PlaneGeometry(2, 2),
+            copyMaterial
+          );
+          this.renderer.setRenderTarget(this.lowRenderTarget);
+          this.renderer.render(copyQuad, this.camera);
+          copyMaterial.dispose();
+          copyQuad.geometry.dispose();
+        }
+      }
+
+      // Initialize
+      document.addEventListener("DOMContentLoaded", () => {
+        document.fonts.ready.then(() => {
+          const canvas = document.getElementById("voxelCanvas");
+          new VoxelLogo(canvas);
+        });
+      });
+    </script>
+  </body>
+</html>

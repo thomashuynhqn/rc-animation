@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASCII Video Animation with Three.js</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #000;
+            font-family: monospace;
+        }
+        #container {
+            width: 100vw;
+            height: 100vh;
+        }
+        #controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 10;
+            color: #0f0;
+            background: rgba(0,0,0,0.7);
+            padding: 15px;
+            border-radius: 5px;
+        }
+        button {
+            background: #0f0;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            font-family: monospace;
+            font-weight: bold;
+        }
+        button:hover {
+            background: #0c0;
+        }
+        #videoSource {
+            display: none;
+        }
+        #cursorIndicator {
+            position: fixed;
+            border: 2px solid rgba(0, 255, 0, 0.5);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 1000;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="controls">
+        <h3>ASCII Video Background</h3>
+        <button id="webcamBtn">Use Webcam</button>
+        <button id="videoBtn">Upload Video</button>
+        <input type="file" id="videoFile" accept="video/*" style="display:none;">
+        <div style="margin-top: 10px;">
+            <label>Resolution: </label>
+            <input type="range" id="resolution" min="20" max="200" value="120" step="10">
+            <span id="resValue">120</span>
+        </div>
+        <div style="margin-top: 10px;">
+            <label>Brightness Threshold: </label>
+            <input type="range" id="threshold" min="0" max="255" value="128" step="1">
+            <span id="thresholdValue">128</span>
+        </div>
+        <div style="margin-top: 10px;">
+            <label>Background Color: </label>
+            <input type="color" id="bgColor" value="#000000">
+        </div>
+        <div style="margin-top: 10px;">
+            <label>Cell Color: </label>
+            <input type="color" id="cellColor" value="#ffffff">
+        </div>
+        <div style="margin-top: 15px; border-top: 1px solid #0f0; padding-top: 10px;">
+            <h4 style="margin: 5px 0;">Cursor Effects</h4>
+            <label>Cursor Radius: </label>
+            <input type="range" id="cursorRadius" min="0" max="300" value="150" step="10">
+            <span id="radiusValue">150</span>
+            <div style="margin-top: 5px;">
+                <label>Effect Intensity: </label>
+                <input type="range" id="effectIntensity" min="0" max="200" value="100" step="10">
+                <span id="intensityValue">100</span>
+            </div>
+        </div>
+    </div>
+    <div id="container"></div>
+    <div id="cursorIndicator"></div>
+    <video id="videoSource" autoplay muted loop playsinline></video>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // ASCII characters from darkest to brightest
+        const ASCII_CHARS = ' .:-=+*%@#';
+        
+        let scene, camera, renderer, texture, material, geometry, mesh;
+        let video, canvas, ctx;
+        let asciiWidth = 120;
+        let asciiHeight = 80;
+        let brightnessThreshold = 128;
+        let bgColor = '#0F131C';
+        let cellColor = '#313C59';
+        let mouseX = -1000;
+        let mouseY = -1000;
+        let cursorRadius = 150;
+        let effectIntensity = 100;
+        
+        function init() {
+            // Create scene
+            scene = new THREE.Scene();
+            
+            // Create camera
+            camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+            
+            // Create renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.getElementById('container').appendChild(renderer.domElement);
+            
+            // Create canvas for video processing
+            canvas = document.createElement('canvas');
+            ctx = canvas.getContext('2d');
+            
+            // Create texture from canvas
+            texture = new THREE.CanvasTexture(canvas);
+            
+            // Create material with the texture
+            material = new THREE.MeshBasicMaterial({ 
+                map: texture,
+                transparent: true
+            });
+            
+            // Create plane geometry
+            geometry = new THREE.PlaneGeometry(2, 2);
+            mesh = new THREE.Mesh(geometry, material);
+            scene.add(mesh);
+            
+            // Get video element
+            video = document.getElementById('videoSource');
+            
+            // Event listeners
+            document.getElementById('webcamBtn').addEventListener('click', startWebcam);
+            document.getElementById('videoBtn').addEventListener('click', () => {
+                document.getElementById('videoFile').click();
+            });
+            document.getElementById('videoFile').addEventListener('change', loadVideoFile);
+            document.getElementById('resolution').addEventListener('input', (e) => {
+                asciiWidth = parseInt(e.target.value);
+                asciiHeight = Math.floor(asciiWidth * 0.67);
+                document.getElementById('resValue').innerText = asciiWidth;
+            });
+            document.getElementById('threshold').addEventListener('input', (e) => {
+                brightnessThreshold = parseInt(e.target.value);
+                document.getElementById('thresholdValue').innerText = brightnessThreshold;
+            });
+            document.getElementById('bgColor').addEventListener('input', (e) => {
+                bgColor = e.target.value;
+            });
+            document.getElementById('cellColor').addEventListener('input', (e) => {
+                cellColor = e.target.value;
+            });
+            document.getElementById('cursorRadius').addEventListener('input', (e) => {
+                cursorRadius = parseInt(e.target.value);
+                document.getElementById('radiusValue').innerText = cursorRadius;
+                
+                // Update cursor indicator visibility
+                const cursorIndicator = document.getElementById('cursorIndicator');
+                if (cursorRadius > 0) {
+                    cursorIndicator.style.width = (cursorRadius * 2) + 'px';
+                    cursorIndicator.style.height = (cursorRadius * 2) + 'px';
+                    cursorIndicator.style.left = (mouseX - cursorRadius) + 'px';
+                    cursorIndicator.style.top = (mouseY - cursorRadius) + 'px';
+                    cursorIndicator.style.display = 'block';
+                } else {
+                    cursorIndicator.style.display = 'none';
+                }
+            });
+            document.getElementById('effectIntensity').addEventListener('input', (e) => {
+                effectIntensity = parseInt(e.target.value);
+                document.getElementById('intensityValue').innerText = effectIntensity;
+            });
+            
+            // Track mouse position
+            const cursorIndicator = document.getElementById('cursorIndicator');
+            document.addEventListener('mousemove', (e) => {
+                mouseX = e.clientX;
+                mouseY = e.clientY;
+                
+                // Update cursor indicator
+                if (cursorRadius > 0) {
+                    cursorIndicator.style.display = 'block';
+                    cursorIndicator.style.left = (mouseX - cursorRadius) + 'px';
+                    cursorIndicator.style.top = (mouseY - cursorRadius) + 'px';
+                    cursorIndicator.style.width = (cursorRadius * 2) + 'px';
+                    cursorIndicator.style.height = (cursorRadius * 2) + 'px';
+                } else {
+                    cursorIndicator.style.display = 'none';
+                }
+            });
+            
+            // Start with a gradient animation
+            startGradientAnimation();
+            
+            // Handle window resize
+            window.addEventListener('resize', onWindowResize);
+            
+            // Start animation loop
+            animate();
+        }
+        
+        function startWebcam() {
+            navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+                .then(stream => {
+                    video.srcObject = stream;
+                    video.play();
+                })
+                .catch(err => {
+                    console.error('Error accessing webcam:', err);
+                    alert('Could not access webcam. Please check permissions.');
+                });
+        }
+        
+        function loadVideoFile(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const url = URL.createObjectURL(file);
+                video.src = url;
+                video.play();
+            }
+        }
+        
+        function startGradientAnimation() {
+            // Create animated gradient as default
+            let time = 0;
+            
+            function animateGradient() {
+                if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                    // Stop gradient when video is ready
+                    return;
+                }
+                
+                canvas.width = asciiWidth * 10;
+                canvas.height = asciiHeight * 16;
+                
+                const gradient = ctx.createLinearGradient(
+                    0, 0, 
+                    canvas.width, canvas.height
+                );
+                
+                time += 0.01;
+                const wave1 = Math.sin(time) * 127 + 128;
+                const wave2 = Math.cos(time * 1.5) * 127 + 128;
+                
+                gradient.addColorStop(0, `rgb(${wave1}, ${wave1}, ${wave1})`);
+                gradient.addColorStop(1, `rgb(${wave2}, ${wave2}, ${wave2})`);
+                
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                videoToAscii();
+                
+                requestAnimationFrame(animateGradient);
+            }
+            
+            animateGradient();
+        }
+        
+        function videoToAscii() {
+            // Set canvas size based on ASCII resolution
+            canvas.width = asciiWidth * 10;
+            canvas.height = asciiHeight * 16;
+            
+            // Fill with background color
+            ctx.fillStyle = bgColor;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Create temporary canvas for video sampling
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = asciiWidth;
+            tempCanvas.height = asciiHeight;
+            const tempCtx = tempCanvas.getContext('2d');
+            
+            // Draw video to temp canvas
+            if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                tempCtx.drawImage(video, 0, 0, asciiWidth, asciiHeight);
+                const imageData = tempCtx.getImageData(0, 0, asciiWidth, asciiHeight);
+                const pixels = imageData.data;
+                
+                // Convert to ASCII with 2-color mode
+                ctx.font = 'bold 16px monospace';
+                ctx.textBaseline = 'top';
+                ctx.fillStyle = cellColor;
+                
+                for (let y = 0; y < asciiHeight; y++) {
+                    for (let x = 0; x < asciiWidth; x++) {
+                        const i = (y * asciiWidth + x) * 4;
+                        const r = pixels[i];
+                        const g = pixels[i + 1];
+                        const b = pixels[i + 2];
+                        
+                        // Calculate brightness
+                        let brightness = (r + g + b) / 3;
+                        
+                        // Calculate screen position of this character
+                        const screenX = x * 10 + 5; // Center of character
+                        const screenY = y * 16 + 8;
+                        
+                        // Calculate distance from mouse
+                        const dx = mouseX - screenX;
+                        const dy = mouseY - screenY;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+                        
+                        // Apply cursor effect if within radius
+                        if (distance < cursorRadius && cursorRadius > 0) {
+                            // Calculate effect strength (1.0 at center, 0.0 at edge)
+                            const strength = 1 - (distance / cursorRadius);
+                            
+                            // Modify brightness based on cursor proximity
+                            const brightnessBoost = strength * effectIntensity * 2;
+                            brightness = Math.min(255, brightness + brightnessBoost);
+                        }
+                        
+                        let char;
+                        if (brightness >= brightnessThreshold) {
+                            // Map brightness to ASCII character (above threshold)
+                            let charIndex = Math.floor((brightness / 255) * (ASCII_CHARS.length - 1));
+                            
+                            // Apply distortion effect near cursor
+                            if (distance < cursorRadius && cursorRadius > 0) {
+                                const strength = 1 - (distance / cursorRadius);
+                                const distortion = Math.floor(strength * effectIntensity / 20);
+                                
+                                // Randomly shift character index for distortion
+                                const randomShift = Math.floor(Math.random() * distortion * 2 - distortion);
+                                charIndex = Math.max(0, Math.min(ASCII_CHARS.length - 1, charIndex + randomShift));
+                            }
+                            
+                            char = ASCII_CHARS[charIndex];
+                        } else {
+                            // Below threshold
+                            if (distance < cursorRadius && cursorRadius > 0) {
+                                const strength = 1 - (distance / cursorRadius);
+                                // Distort the '+' character to random ASCII when close to cursor
+                                if (strength > 0.7) {
+                                    const randomChars = '!@#$%^&*()_+-=[]{}|;:,.<>?~';
+                                    char = randomChars[Math.floor(Math.random() * randomChars.length)];
+                                } else {
+                                    char = '+';
+                                }
+                            } else {
+                                char = '+';
+                            }
+                        }
+                        
+                        // Draw character in cell color
+                        ctx.fillText(char, x * 10, y * 16);
+                    }
+                }
+            }
+            
+            // Update texture
+            texture.needsUpdate = true;
+        }
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                videoToAscii();
+            }
+            
+            renderer.render(scene, camera);
+        }
+        
+        function onWindowResize() {
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        
+        // Initialize
+        init();
+    </script>
+</body>
+</html>
