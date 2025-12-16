@@ -807,6 +807,11 @@
             1
           );
         },
+        expoInOut: (t) => {
+          if (t === 0 || t === 1) return t;
+          if (t < 0.5) return Math.pow(2, 20 * t - 10) / 2;
+          return (2 - Math.pow(2, -20 * t + 10)) / 2;
+        },
       };
 
       function fit(value, inMin, inMax, outMin, outMax, easeFunc = null) {
@@ -831,6 +836,10 @@
           this.voxels = [];
           this.appearType = "scale";
           this.extraCloudIndex = 3;
+          this.prevElapsed = 0;
+          this.smoothedCenter = new THREE.Vector3();
+          this.spinSmoothedY = 0;
+          this.morphBlend = 0;
 
           // Palette tuned for stronger contrast
           this.color = new THREE.Color("#5c7df6");
@@ -861,12 +870,12 @@
           this.timing = {
             appear: 1.1,
             idle_clouds: 1.2,
-            spin_add_cloud: 5.2,
-            hold_four: 1.2,
-            spin_to_logo: 5.0,
-            hold_logo: 1.4,
-            spin_back_clouds: 4.8,
-            hold_clouds: 1.4,
+            spin_add_cloud: 1.0,
+            hold_four: 3.5,
+            spin_to_logo: 1.0,
+            hold_logo: 4.0,
+            spin_back_clouds: 1.0,
+            hold_clouds: 4.0,
           };
 
           this.init();
@@ -914,6 +923,7 @@
           // Blue material for rings 1 & 2 (slightly emissive)
           this.blueMaterial = new THREE.ShaderMaterial({
             uniforms: { u_lightPosition: { value: this.lightPosition } },
+            side: THREE.DoubleSide,
             vertexShader: `
                               varying vec3 v_worldPosition;
                               varying vec3 v_worldNormal;
@@ -931,10 +941,14 @@
                               void main() {
                                   vec3 N = normalize(v_worldNormal);
                                   vec3 L = normalize(u_lightPosition - v_worldPosition);
+                                  vec3 V = normalize(v_viewNormal);
                                   float shade1 = max(0.0, dot(N, L)) / (length(u_lightPosition - v_worldPosition) * 0.38);
-                                  float shade2 = max(0.0, dot(normalize(v_viewNormal), vec3(0.5773)));
-                                  float glow = 0.25 + shade2 * 0.3;
-                                  gl_FragColor = vec4(shade1 * 1.15 + glow * 0.3, shade2 * 1.1 + glow * 0.2, 1.1 + glow, 1.0);
+                                  float shade2 = max(0.0, dot(V, vec3(0.5773)));
+                                  float rim = pow(1.0 - abs(dot(V, N)), 2.0);
+                                  float ambient = 0.25;
+                                  float glow = 0.25 + rim * 0.4;
+                                  float b = ambient + shade1 * 1.2 + shade2 * 1.05 + glow;
+                                  gl_FragColor = vec4(b * 0.45, b * 0.75, b * 1.05, 1.0);
                               }
                           `,
           });
@@ -942,6 +956,7 @@
           // Dark material for ring 3
           this.darkMaterial = new THREE.ShaderMaterial({
             uniforms: { u_lightPosition: { value: this.lightPosition } },
+            side: THREE.DoubleSide,
             vertexShader: `
                               varying vec3 v_worldPosition;
                               varying vec3 v_worldNormal;
@@ -959,9 +974,13 @@
                               void main() {
                                   vec3 N = normalize(v_worldNormal);
                                   vec3 L = normalize(u_lightPosition - v_worldPosition);
+                                  vec3 V = normalize(v_viewNormal);
                                   float shade1 = max(0.0, dot(N, L)) / (length(u_lightPosition - v_worldPosition) * 0.5);
-                                  float shade2 = max(0.0, dot(normalize(v_viewNormal), vec3(0.5773)));
-                                  gl_FragColor = vec4(shade1 * 0.35, shade2 * 0.35, shade2 * 0.45 + 0.25, 1.0);
+                                  float shade2 = max(0.0, dot(V, vec3(0.5773)));
+                                  float rim = pow(1.0 - abs(dot(V, N)), 2.0);
+                                  float ambient = 0.22;
+                                  float b = ambient + shade1 * 0.6 + shade2 * 0.6 + rim * 0.4;
+                                  gl_FragColor = vec4(b * 0.35, b * 0.45, b * 0.65 + 0.1, 1.0);
                               }
                           `,
           });
@@ -1003,6 +1022,7 @@
 
         createVoxelSystem() {
           this.logoContainer = new THREE.Object3D();
+          this.spinPivot = new THREE.Object3D();
           this.logoOuterContainer = new THREE.Object3D();
 
           this.boxGeometry = new THREE.BoxGeometry(1, 1, 1);
@@ -1024,12 +1044,12 @@
 
           // Generate positions for 4 clouds (3 base + 1 that fades in during spin)
           const spread = 3;
-          // Adjust these anchors to shift each cloud (the last entry is the bonus cloud)
+          // Adjust these anchors to shift each cloud (laid out as a rhombus; last entry = bonus cloud)
           const cloudCenters = [
-            { x: 200, y: -130 }, // top
-            { x: 70, y: 60 }, // left
-            { x: 380, y: 50 }, // right
-            { x: 260, y: -260 }, // surprise cloud (sits lower/back)
+            { x: 220, y: -150 }, // top (pull in from edge)
+            { x: 0, y: 50 }, // left
+            { x: 420, y: 20 }, // right
+            { x: 200, y: 200 }, // bottom (appears when we add the 4th cloud)
           ];
           const scaledCloudCenters = cloudCenters.map((p) => ({
             x: p.x * spread,
@@ -1037,7 +1057,7 @@
           }));
           const cloudVoxels = this.generateItemPositions(
             buildCloudPathConfig(scaledCloudCenters.length),
-            6,
+            5.8,
             scaledCloudCenters
           );
 
@@ -1092,8 +1112,9 @@
             }
           }
 
-          this.logoContainer.scale.setScalar(0.2);
-          this.logoOuterContainer.add(this.logoContainer);
+          this.logoContainer.scale.setScalar(0.175);
+          this.spinPivot.add(this.logoContainer);
+          this.logoOuterContainer.add(this.spinPivot);
           this.scene.add(this.logoOuterContainer);
 
           this.createRodPool();
@@ -1366,7 +1387,7 @@
               u_color: { value: this.color },
               u_mouseXY: { value: new THREE.Vector2(0, 0) },
               u_resolution: { value: new THREE.Vector2(1, 1) },
-              u_brightness: { value: 1.9 },
+              u_brightness: { value: 2.05 },
             },
             vertexShader: `
                               varying vec2 v_uv;
@@ -1482,8 +1503,11 @@
             phase === "spin_to_logo" ||
             phase === "spin_back_clouds"
           ) {
-            this.spinStartAngle = this.spinAngle;
-            this.spinTargetAngle = this.spinAngle + Math.PI * 2;
+            // Start from current rotation to avoid jumps between phases
+            const currentY = this.logoContainer.rotation.y;
+            this.spinAngle = currentY;
+            this.spinStartAngle = currentY;
+            this.spinTargetAngle = currentY - Math.PI * 2; // clockwise to avoid mirrored feel
           }
         }
 
@@ -1520,6 +1544,8 @@
           requestAnimationFrame(() => this.animate());
 
           const elapsed = (Date.now() - this.startTime) / 1000;
+          const delta = this.prevElapsed ? elapsed - this.prevElapsed : 0.016;
+          this.prevElapsed = elapsed;
           const { phaseTime, duration } = this.updatePhase(elapsed);
           const phaseProgress = Math.min(1, phaseTime / duration);
 
@@ -1549,29 +1575,41 @@
               : 0;
           const splitProgress =
             this.phase === "spin_back_clouds"
-              ? ease.cubicInOut(phaseProgress)
+              ? ease.expoInOut(phaseProgress)
               : 0;
 
-          const extraVisibility =
-            this.phase === "spin_add_cloud"
-              ? ease.elasticOut(
-                  fit(phaseTime, duration * 0.12, duration * 0.72, 0, 1)
+          const extraActivePhases = [
+            "spin_add_cloud",
+            "hold_four",
+            "spin_to_logo",
+            "hold_logo",
+            "spin_back_clouds",
+          ];
+          const extraActive = extraActivePhases.includes(this.phase);
+          const targetExtraVisibility = extraActive
+            ? this.phase === "spin_add_cloud"
+              ? ease.cubicInOut(
+                  fit(phaseTime, duration * 0.1, duration * 0.9, 0, 1)
                 )
               : this.phase === "hold_four" ||
                 this.phase === "spin_to_logo" ||
                 this.phase === "hold_logo"
               ? 1
-              : this.phase === "spin_back_clouds"
-              ? 1 -
-                fit(
-                  phaseTime,
-                  duration * 0.35,
-                  duration,
-                  0,
-                  1,
-                  ease.cubicInOut
+              : 1 -
+                ease.cubicInOut(
+                  fit(phaseTime, duration * 0.1, duration * 0.9, 0, 1)
                 )
-              : 0;
+            : 0;
+
+          // Smoothed extra cloud visibility (prevents phase pop)
+          if (this.extraVisibility === undefined) this.extraVisibility = 0;
+          const alphaLerp = Math.min(1, delta * 1.5); // slower blend to remove pops
+          this.extraVisibility = lerp(
+            this.extraVisibility,
+            targetExtraVisibility,
+            alphaLerp
+          );
+          const extraVisibility = this.extraVisibility;
 
           const spinPhases = [
             "spin_add_cloud",
@@ -1579,70 +1617,75 @@
             "spin_back_clouds",
           ];
           const inSpin = spinPhases.includes(this.phase);
-          const spinProgress = inSpin ? ease.cubicInOut(phaseProgress) : 0;
-          const rotationY = inSpin
+          const spinProgress = inSpin ? ease.expoInOut(phaseProgress) : 0;
+          const targetRotationY = inSpin
             ? lerp(this.spinStartAngle, this.spinTargetAngle, spinProgress)
-            : this.spinAngle + Math.sin(elapsed * 0.2) * 0.08;
+            : this.spinAngle + Math.sin(elapsed * 0.2) * 0.04;
+          const rotLerp = Math.min(1, delta * 4.5);
+          this.spinSmoothedY = lerp(this.spinSmoothedY, targetRotationY, rotLerp);
 
-          // Slight wobble keeps the voxel stacks lively
+          // Slight wobble keeps the voxel stacks lively (reduced for smoothness)
           this.logoContainer.rotation.set(
-            -0.08 + Math.sin(elapsed * 0.25) * 0.06,
-            rotationY,
-            Math.cos(elapsed * 0.2) * 0.05
+            -0.05 + Math.sin(elapsed * 0.2) * 0.03,
+            this.spinSmoothedY,
+            Math.cos(elapsed * 0.16) * 0.03
           );
 
           // Camera-facing tilt
           this.logoOuterContainer.rotation.set(
-            -0.32 + Math.sin(elapsed * 0.18) * 0.04,
+            -0.25,
             Math.PI * 0.16,
-            0.08
+            0.06
           );
           this.logoOuterContainer.position.set(
-            0.35,
-            0.04 + Math.sin(elapsed * 0.7) * 0.05,
+            0,
+            0.02,
             0
           );
 
-          // Build rod anchors for current state
-          const rodAnchors = [];
+          // === Rod logic: temporarily disabled to remove connecting lines ===
+          // To re-enable connections, set rodsEnabled = true and adjust opacity below.
+          const rodAnchors = []; // empty means no rods drawn
+          const rodsEnabled = false;
+          const rodOpacity = 0;
+          this.updateRods(rodAnchors, rodsEnabled ? rodOpacity : 0);
+
+          // === Center pivot for spinning: keep rotation around the visible mass ===
+          const morphRaw =
+            this.phase === "spin_to_logo" || this.phase === "hold_logo"
+              ? mergeProgress || 1
+              : this.phase === "spin_back_clouds"
+              ? 1 - splitProgress
+              : 0;
+
+          const morphBlendLerp = Math.min(1, delta * 3);
+          this.morphBlend = lerp(this.morphBlend, morphRaw, morphBlendLerp);
+
+          const activeAnchors = [];
           this.cloudAnchors.forEach((cloudAnchor, idx) => {
             const ringAnchor = this.ringAnchors[idx % this.ringAnchors.length];
             const isExtra = idx === this.extraCloudIndex;
-            const anchorVisibility = isExtra ? extraVisibility : 1;
-            let anchor = cloudAnchor.clone();
-            if (mergeProgress > 0) {
-              anchor = cloudAnchor.clone().lerp(ringAnchor, mergeProgress);
-            }
-            if (splitProgress > 0) {
-              anchor = ringAnchor.clone().lerp(cloudAnchor, splitProgress);
-            }
-            if (anchorVisibility > 0.02) {
-              rodAnchors.push(anchor);
+            const visibility = isExtra ? extraVisibility : 1;
+            if (visibility > 0.02) {
+              const blended = cloudAnchor.clone().lerp(ringAnchor, this.morphBlend);
+              activeAnchors.push(blended);
             }
           });
 
-          const rodOpacity = (() => {
-            if (this.phase === "appear") {
-              return fit(phaseTime, 0.2, duration, 0, 0.6, ease.cubicInOut);
-            }
-            if (this.phase === "idle_clouds" || this.phase === "hold_clouds") {
-              return 0.4;
-            }
-            if (this.phase === "spin_add_cloud") {
-              return 0.6 + 0.25 * Math.sin(Math.PI * spinProgress);
-            }
-            if (this.phase === "hold_four") return 0.75;
-            if (this.phase === "spin_to_logo") {
-              return lerp(0.75, 0.1, mergeProgress);
-            }
-            if (this.phase === "hold_logo") return 0.0;
-            if (this.phase === "spin_back_clouds") {
-              return lerp(0.2, 0.55, splitProgress);
-            }
-            return 0.45;
-          })();
+          let center = new THREE.Vector3();
+          if (activeAnchors.length) {
+            activeAnchors.forEach((a) => center.add(a));
+            center.divideScalar(activeAnchors.length);
+          }
+          // Smooth center to avoid micro-jumps while spinning
+          const centerLerp = Math.min(1, delta * 1.2);
+          this.smoothedCenter.lerp(center, centerLerp);
 
-          this.updateRods(rodAnchors, rodOpacity);
+          // Re-center the container so spinPivot rotates around the mass center
+          this.spinPivot.position.copy(this.smoothedCenter);
+          this.logoContainer.position.copy(
+            this.smoothedCenter.clone().multiplyScalar(-1)
+          );
 
           // Animate voxels based on phase
           this.voxels.forEach((voxel, index) => {
@@ -1652,12 +1695,16 @@
             let targetZ = voxel.cloudPos.z;
             let scale = isExtra ? extraVisibility : 1;
 
+            const morphDamp = 1 - this.morphBlend * 0.65;
+            const bobScale = (isExtra ? extraVisibility : 1) * morphDamp;
             const bobX =
-              Math.sin(elapsed * 2 + index * 0.12) * 0.035 +
-              Math.sin(elapsed * 0.7 + voxel.groupIndex) * 0.02;
+              (Math.sin(elapsed * 2 + index * 0.12) * 0.035 +
+                Math.sin(elapsed * 0.7 + voxel.groupIndex) * 0.02) *
+            bobScale;
             const bobY =
-              Math.cos(elapsed * 1.6 + index * 0.12) * 0.035 +
-              Math.cos(elapsed * 0.5 + voxel.groupIndex) * 0.02;
+              (Math.cos(elapsed * 1.6 + index * 0.12) * 0.035 +
+                Math.cos(elapsed * 0.5 + voxel.groupIndex) * 0.02) *
+              bobScale;
 
             if (this.phase === "appear") {
               const appearProgress = fit(
@@ -1692,54 +1739,16 @@
                 appearProgress
               );
               scale = isExtra ? 0 : appearProgress;
-            } else if (mergeProgress > 0) {
-              targetX = lerp(
-                voxel.cloudPos.x,
-                voxel.ringPos.x,
-                mergeProgress
-              );
-              targetY = lerp(
-                voxel.cloudPos.y,
-                voxel.ringPos.y,
-                mergeProgress
-              );
-              targetZ = lerp(
-                voxel.cloudPos.z,
-                voxel.ringPos.z,
-                mergeProgress
-              );
-            } else if (splitProgress > 0) {
-              targetX = lerp(
-                voxel.ringPos.x,
-                voxel.cloudPos.x,
-                splitProgress
-              );
-              targetY = lerp(
-                voxel.ringPos.y,
-                voxel.cloudPos.y,
-                splitProgress
-              );
-              targetZ = lerp(
-                voxel.ringPos.z,
-                voxel.cloudPos.z,
-                splitProgress
-              );
-              if (isExtra) {
-                scale *=
-                  1 -
-                  fit(
-                    phaseTime,
-                    duration * 0.35,
-                    duration,
-                    0,
-                    1,
-                    ease.cubicInOut
-                  );
-              }
             } else {
-              targetX = voxel.cloudPos.x + bobX;
-              targetY = voxel.cloudPos.y + bobY;
-              targetZ = voxel.cloudPos.z;
+              const morph = this.morphBlend;
+              targetX = lerp(voxel.cloudPos.x, voxel.ringPos.x, morph);
+              targetY = lerp(voxel.cloudPos.y, voxel.ringPos.y, morph);
+              targetZ = lerp(voxel.cloudPos.z, voxel.ringPos.z, morph);
+
+              if (morph < 0.999) {
+                targetX += bobX;
+                targetY += bobY;
+              }
             }
 
             if (this.phase === "spin_add_cloud" && isExtra) {
@@ -1750,7 +1759,13 @@
             }
 
             voxel.container.position.set(targetX, targetY, targetZ);
-            voxel.container.scale.setScalar(0.62 * Math.max(0, scale));
+            let visualScale = Math.max(0, scale);
+            if (isExtra && !extraActive) {
+              visualScale = 0; // hide the 4th cloud outside active phases
+            } else if (visualScale > 0) {
+              visualScale = Math.max(0.05, visualScale);
+            }
+            voxel.container.scale.setScalar(0.62 * visualScale);
           });
 
           // Render
