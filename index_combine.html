@@ -14,7 +14,12 @@
       }
 
       body {
-        background: radial-gradient(120% 120% at 20% 20%, #111a2d 0%, #0a0d14 55%, #05070e 100%);
+        background: radial-gradient(
+          120% 120% at 20% 20%,
+          #111a2d 0%,
+          #0a0d14 55%,
+          #05070e 100%
+        );
         color: #cfd7ff;
         overflow: hidden;
       }
@@ -834,7 +839,7 @@
           this.mouseY = 0;
           this.startTime = Date.now();
           this.voxels = [];
-          this.appearType = "scale";
+          this.appearType = "move";
           this.extraCloudIndex = 3;
           this.prevElapsed = 0;
           this.smoothedCenter = new THREE.Vector3();
@@ -842,8 +847,8 @@
           this.morphBlend = 0;
 
           // Palette tuned for stronger contrast
-          this.color = new THREE.Color("#5c7df6");
-          this.bgColor = new THREE.Color("#0b1020");
+          this.color = new THREE.Color("#475882");
+          this.bgColor = new THREE.Color("#0F131C");
 
           // Storyboard phases
           this.phases = [
@@ -869,7 +874,8 @@
           // Timing (seconds) for each step in the loop
           this.timing = {
             appear: 1.1,
-            idle_clouds: 1.2,
+            // idle_clouds: 1.2,
+            idle_clouds: 1000,
             spin_add_cloud: 1.0,
             hold_four: 3.5,
             spin_to_logo: 1.0,
@@ -986,37 +992,73 @@
           });
 
           // Cyan rods connecting clouds while they spin
+          // this.rodMaterial = new THREE.ShaderMaterial({
+          //   uniforms: {
+          //     u_lightPosition: { value: this.lightPosition },
+          //     u_opacity: { value: 1 },
+          //   },
+          //   transparent: true,
+          //   depthWrite: false,
+          //   vertexShader: `
+          //                     varying vec3 v_worldPosition;
+          //                     varying vec3 v_worldNormal;
+          //                     varying vec3 v_viewNormal;
+          //                     void main() {
+          //                         gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          //                         v_viewNormal = normalMatrix * normal;
+          //                         v_worldNormal = normalize((vec4(v_viewNormal, 0.0) * viewMatrix).xyz);
+          //                         v_worldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
+          //                     }
+          //                 `,
+          //   fragmentShader: `
+          //                     uniform vec3 u_lightPosition;
+          //                     uniform float u_opacity;
+          //                     varying vec3 v_worldPosition, v_worldNormal, v_viewNormal;
+          //                     void main() {
+          //                         vec3 N = normalize(v_worldNormal);
+          //                         vec3 L = normalize(u_lightPosition - v_worldPosition);
+          //                         float shade1 = max(0.0, dot(N, L)) / (length(u_lightPosition - v_worldPosition) * 0.35);
+          //                         float shade2 = max(0.0, dot(normalize(v_viewNormal), vec3(0.5773)));
+          //                         float brightness = 0.5 + shade1 * 0.35 + shade2 * 0.35;
+          //                         gl_FragColor = vec4(brightness * 0.45, brightness * 0.8, brightness * 1.1, clamp(u_opacity, 0.0, 1.0));
+          //                     }
+          //                 `,
+          // });
           this.rodMaterial = new THREE.ShaderMaterial({
             uniforms: {
               u_lightPosition: { value: this.lightPosition },
-              u_opacity: { value: 1 },
             },
-            transparent: true,
-            depthWrite: false,
             vertexShader: `
-                              varying vec3 v_worldPosition;
-                              varying vec3 v_worldNormal;
-                              varying vec3 v_viewNormal;
-                              void main() {
-                                  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-                                  v_viewNormal = normalMatrix * normal;
-                                  v_worldNormal = normalize((vec4(v_viewNormal, 0.0) * viewMatrix).xyz);
-                                  v_worldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
-                              }
-                          `,
+                        varying vec3 v_worldPosition;
+                        varying vec3 v_worldNormal;
+                        varying vec3 v_viewNormal;
+
+                        void main() {
+                            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                            v_viewNormal = normalMatrix * normal;
+                            v_worldNormal = normalize((vec4(v_viewNormal, 0.0) * viewMatrix).xyz);
+                            v_worldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
+                        }
+                    `,
             fragmentShader: `
-                              uniform vec3 u_lightPosition;
-                              uniform float u_opacity;
-                              varying vec3 v_worldPosition, v_worldNormal, v_viewNormal;
-                              void main() {
-                                  vec3 N = normalize(v_worldNormal);
-                                  vec3 L = normalize(u_lightPosition - v_worldPosition);
-                                  float shade1 = max(0.0, dot(N, L)) / (length(u_lightPosition - v_worldPosition) * 0.35);
-                                  float shade2 = max(0.0, dot(normalize(v_viewNormal), vec3(0.5773)));
-                                  float brightness = 0.5 + shade1 * 0.35 + shade2 * 0.35;
-                                  gl_FragColor = vec4(brightness * 0.45, brightness * 0.8, brightness * 1.1, clamp(u_opacity, 0.0, 1.0));
-                              }
-                          `,
+                        uniform vec3 u_lightPosition;
+                        varying vec3 v_worldPosition;
+                        varying vec3 v_worldNormal;
+                        varying vec3 v_viewNormal;
+
+                        void main() {
+                            vec3 VN = normalize(v_viewNormal);
+                            vec3 N = normalize(v_worldNormal);
+                            vec3 L = normalize(u_lightPosition - v_worldPosition);
+
+                            float shade1 = max(0.0, dot(N, L)) / (length(u_lightPosition - v_worldPosition) * 0.4);
+                            float shade2 = max(0.0, dot(VN, vec3(0.5773)));
+
+                            // Bright glow effect
+                            float brightness = 0.5 + shade1 * 0.3 + shade2 * 0.3;
+                            gl_FragColor = vec4(brightness * 0.5, brightness * 0.7, brightness, 1.0);
+                        }
+                    `,
           });
         }
 
@@ -1026,7 +1068,6 @@
           this.logoOuterContainer = new THREE.Object3D();
 
           this.boxGeometry = new THREE.BoxGeometry(1, 1, 1);
-          this.rodGeometry = new THREE.BoxGeometry(1, 1, 1);
 
           // Generate positions for 3 interlocking rings (logo form)
           const offsetX = 380;
@@ -1060,6 +1101,14 @@
             5.8,
             scaledCloudCenters
           );
+
+          console.log("Generated logo voxels:", cloudVoxels);
+
+          this.rods = [];
+
+          this.createRod(cloudVoxels[0][15], cloudVoxels[1][100]); // Top to Left
+          this.createRod(cloudVoxels[0][20], cloudVoxels[2][45]); // Top to Right
+          this.createRod(cloudVoxels[1][100], cloudVoxels[2][45]); // Left to Right
 
           // Base anchors for rods and spinning
           this.cloudAnchors = cloudVoxels.map((points) =>
@@ -1107,7 +1156,8 @@
                 ringPos: { ...ringPos },
                 currentPos: { ...cloudPos },
                 scale: 0,
-                delay: groupIndex * 0.25 + i * 0.01,
+                // delay: groupIndex * 0.25 + i * 0.01,
+                delay: groupIndex * 0.25,
               });
             }
           }
@@ -1116,8 +1166,46 @@
           this.spinPivot.add(this.logoContainer);
           this.logoOuterContainer.add(this.spinPivot);
           this.scene.add(this.logoOuterContainer);
+        }
+        createRod(from, to) {
+          const rod = new THREE.Object3D();
 
-          this.createRodPool();
+          // Calculate direction and length
+          const dx = to.x - from.x;
+          const dy = to.y - from.y;
+          const dz = to.z - from.z;
+          const length = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+          const geometry = new THREE.BoxGeometry(1, 1, 1);
+
+          // Create rod mesh
+          const mesh = new THREE.Mesh(geometry, this.rodMaterial);
+          const container = new THREE.Object3D();
+
+          // Position at midpoint
+          container.position.set(
+            (from.x + to.x) / 2,
+            (from.y + to.y) / 2,
+            (from.z + to.z) / 2
+          );
+
+          // Scale to create VISIBLE rod (thicker)
+          container.scale.set(0.1, 0.1, length);
+
+          console.log("Rod length:", length);
+
+          // Rotate to point from -> to
+          container.lookAt(to.x, to.y, to.z);
+
+          container.add(mesh);
+          this.logoContainer.add(container);
+
+          this.rods.push({
+            mesh,
+            container,
+            delay: 1.5 * 0.45,
+            length: length,
+          });
         }
         generateItemPositions(
           configs,
@@ -1145,7 +1233,7 @@
 
           // Helper: Add voxel to stroke (2D, flat)
           const addVoxel = (x, y, strokeIndex) => {
-            const rangeLimit = 0.01;
+            const rangeLimit = 0.06;
             // const rangeLimit = 1;
             const vx = Math.round(x / voxelSize) * voxelSize;
             const vy = Math.round(y / voxelSize) * voxelSize;
@@ -1321,20 +1409,6 @@
           return this.bezierPoint(newPoints, t);
         }
 
-        generateCloudPositions() {
-          const clouds = [[], [], []];
-          const voxelSize = 0.6;
-
-          return clouds;
-        }
-
-        createRodPool() {
-          this.rodContainer = new THREE.Object3D();
-          this.logoContainer.add(this.rodContainer);
-          this.rodPool = [];
-          this.rodThickness = 0.16;
-        }
-
         updateRods(anchors = [], opacity = 1) {
           const pairs = [];
           for (let i = 0; i < anchors.length; i++) {
@@ -1344,34 +1418,38 @@
           }
 
           // Expand pool if needed
-          while (this.rodPool.length < pairs.length) {
-            const mesh = new THREE.Mesh(this.rodGeometry, this.rodMaterial);
-            const container = new THREE.Object3D();
-            container.add(mesh);
-            this.rodContainer.add(container);
-            this.rodPool.push({ mesh, container });
-          }
+          // while (this.rodPool.length < pairs.length) {
+          //   const mesh = new THREE.Mesh(this.rodGeometry, this.rodMaterial);
+          //   const container = new THREE.Object3D();
+          //   container.add(mesh);
+          //   this.rodContainer.add(container);
+          //   this.rodPool.push({ mesh, container });
+          // }
 
-          this.rodPool.forEach((rod, idx) => {
-            if (idx >= pairs.length) {
-              rod.container.visible = false;
-              return;
-            }
-            const [a, b] = pairs[idx];
-            const start = a.clone();
-            const end = b.clone();
-            const direction = end.clone().sub(start);
-            const length = Math.max(0.15, direction.length());
-            const midpoint = start.clone().add(end).multiplyScalar(0.5);
+          // this.rodPool.forEach((rod, idx) => {
+          //   if (idx >= pairs.length) {
+          //     rod.container.visible = false;
+          //     return;
+          //   }
+          //   const [a, b] = pairs[idx];
+          //   const start = a.clone();
+          //   const end = b.clone();
+          //   const direction = end.clone().sub(start);
+          //   const length = Math.max(0.15, direction.length());
+          //   const midpoint = start.clone().add(end).multiplyScalar(0.5);
 
-            rod.container.visible = opacity > 0.01;
-            rod.mesh.visible = rod.container.visible;
-            rod.mesh.material.uniforms.u_opacity.value = opacity;
+          //   rod.container.visible = opacity > 0.01;
+          //   rod.mesh.visible = rod.container.visible;
+          //   rod.mesh.material.uniforms.u_opacity.value = opacity;
 
-            rod.container.position.copy(midpoint);
-            rod.container.lookAt(end);
-            rod.container.scale.set(this.rodThickness, this.rodThickness, length);
-          });
+          //   rod.container.position.copy(midpoint);
+          //   rod.container.lookAt(end);
+          //   rod.container.scale.set(
+          //     this.rodThickness,
+          //     this.rodThickness,
+          //     length
+          //   );
+          // });
         }
 
         createPostProcessing() {
@@ -1622,7 +1700,11 @@
             ? lerp(this.spinStartAngle, this.spinTargetAngle, spinProgress)
             : this.spinAngle + Math.sin(elapsed * 0.2) * 0.04;
           const rotLerp = Math.min(1, delta * 4.5);
-          this.spinSmoothedY = lerp(this.spinSmoothedY, targetRotationY, rotLerp);
+          this.spinSmoothedY = lerp(
+            this.spinSmoothedY,
+            targetRotationY,
+            rotLerp
+          );
 
           // Slight wobble keeps the voxel stacks lively (reduced for smoothness)
           this.logoContainer.rotation.set(
@@ -1632,16 +1714,8 @@
           );
 
           // Camera-facing tilt
-          this.logoOuterContainer.rotation.set(
-            -0.25,
-            Math.PI * 0.16,
-            0.06
-          );
-          this.logoOuterContainer.position.set(
-            0,
-            0.02,
-            0
-          );
+          this.logoOuterContainer.rotation.set(-0.25, Math.PI * 0.16, 0.06);
+          this.logoOuterContainer.position.set(0, 0.02, 0);
 
           // === Rod logic: temporarily disabled to remove connecting lines ===
           // To re-enable connections, set rodsEnabled = true and adjust opacity below.
@@ -1667,7 +1741,9 @@
             const isExtra = idx === this.extraCloudIndex;
             const visibility = isExtra ? extraVisibility : 1;
             if (visibility > 0.02) {
-              const blended = cloudAnchor.clone().lerp(ringAnchor, this.morphBlend);
+              const blended = cloudAnchor
+                .clone()
+                .lerp(ringAnchor, this.morphBlend);
               activeAnchors.push(blended);
             }
           });
@@ -1687,6 +1763,22 @@
             this.smoothedCenter.clone().multiplyScalar(-1)
           );
 
+          if (this.phase === "appear") {
+            this.rods.forEach((rod) => {
+              const rodTime = phaseTime - rod.delay;
+
+              const appearProgress = Math.max(
+                0,
+                Math.min(1, (rodTime * 1.5) / (duration - rod.delay))
+              );
+
+              const targetScaleZ = rod.length;
+              const scaleZ = lerp(0.01, targetScaleZ, appearProgress);
+
+              rod.container.scale.set(0.1, 0.1, scaleZ);
+            });
+          }
+
           // Animate voxels based on phase
           this.voxels.forEach((voxel, index) => {
             const isExtra = voxel.groupIndex === this.extraCloudIndex;
@@ -1700,7 +1792,7 @@
             const bobX =
               (Math.sin(elapsed * 2 + index * 0.12) * 0.035 +
                 Math.sin(elapsed * 0.7 + voxel.groupIndex) * 0.02) *
-            bobScale;
+              bobScale;
             const bobY =
               (Math.cos(elapsed * 1.6 + index * 0.12) * 0.035 +
                 Math.cos(elapsed * 0.5 + voxel.groupIndex) * 0.02) *
