@@ -57,6 +57,7 @@
         }
       }
     </script>
+    <script src="./config.js"></script>
 
     <script type="module">
       import * as THREE from "three";
@@ -75,668 +76,6 @@
        *   8) hold_clouds → short rest before looping to step 3
        * - Tune timings in this.timing inside VoxelLogo.
        */
-      const LOGO_PATH_CONFIG = [
-        // =========================================================
-        // STROKE 0 (Blue) – Left "C" shape
-        // =========================================================
-        {
-          strokeIndex: 0,
-          segments: [
-            {
-              type: "cubic",
-              segments: 10,
-              c0: { x: 280.68, y: 493.55 },
-              c1: { x: 271.39, y: 495.49 },
-              c2: { x: 264.7, y: 496.18 },
-              c3: { x: 252.5, y: 496.45 },
-            },
-            {
-              type: "cubic",
-              segments: 10,
-              c0: { x: 252.5, y: 496.45 },
-              c1: { x: 234.35, y: 496.85 },
-              c2: { x: 232.49, y: 496.71 },
-              c3: { x: 218.0, y: 493.9 },
-            },
-            {
-              type: "cubic",
-              segments: 10,
-              c0: { x: 218.0, y: 493.9 },
-              c1: { x: 156.62, y: 481.99 },
-              c2: { x: 107.56, y: 434.17 },
-              c3: { x: 93.44, y: 372.5 },
-            },
-            {
-              type: "cubic",
-              segments: 10,
-              c0: { x: 93.44, y: 372.5 },
-              c1: { x: 89.53, y: 355.43 },
-              c2: { x: 88.84, y: 329.02 },
-              c3: { x: 91.84, y: 311.41 },
-            },
-            {
-              type: "cubic",
-              segments: 10,
-              c0: { x: 91.84, y: 311.41 },
-              c1: { x: 103.11, y: 245.28 },
-              c2: { x: 155.02, y: 192.92 },
-              c3: { x: 221.12, y: 181.02 },
-            },
-            {
-              type: "cubic",
-              segments: 10,
-              c0: { x: 221.12, y: 181.02 },
-              c1: { x: 235.19, y: 178.49 },
-              c2: { x: 261.28, y: 178.24 },
-              c3: { x: 274.62, y: 180.51 },
-            },
-            {
-              type: "cubic",
-              segments: 10,
-              c0: { x: 274.62, y: 180.51 },
-              c1: { x: 294.88, y: 183.97 },
-              c2: { x: 319.43, y: 193.09 },
-              c3: { x: 326.15, y: 199.65 },
-            },
-            {
-              type: "cubic",
-              segments: 10,
-              c0: { x: 326.15, y: 199.65 },
-              c1: { x: 330.89, y: 204.27 },
-              c2: { x: 332.35, y: 208.52 },
-              c3: { x: 331.8, y: 216.09 },
-            },
-            {
-              type: "cubic",
-              segments: 10,
-              c0: { x: 331.8, y: 216.09 },
-              c1: { x: 331.29, y: 223.18 },
-              c2: { x: 327.76, y: 228.29 },
-              c3: { x: 320.98, y: 231.75 },
-            },
-            {
-              type: "cubic",
-              segments: 10,
-              c0: { x: 320.98, y: 231.75 },
-              c1: { x: 314.53, y: 235.04 },
-              c2: { x: 310.34, y: 234.63 },
-              c3: { x: 298.69, y: 229.57 },
-            },
-            {
-              type: "cubic",
-              segments: 10,
-              c0: { x: 298.69, y: 229.57 },
-              c1: { x: 273.87, y: 218.77 },
-              c2: { x: 250.8, y: 215.92 },
-              c3: { x: 226.01, y: 220.59 },
-            },
-            {
-              type: "cubic",
-              segments: 10,
-              c0: { x: 226.01, y: 220.59 },
-              c1: { x: 178.88, y: 229.45 },
-              c2: { x: 141.79, y: 266.53 },
-              c3: { x: 131.37, y: 315.2 },
-            },
-            {
-              type: "cubic",
-              segments: 10,
-              c0: { x: 131.37, y: 315.2 },
-              c1: { x: 129.17, y: 325.48 },
-              c2: { x: 128.91, y: 348.54 },
-              c3: { x: 130.88, y: 358.0 },
-            },
-            {
-              type: "cubic",
-              segments: 10,
-              c0: { x: 130.88, y: 358.0 },
-              c1: { x: 137.4, y: 389.24 },
-              c2: { x: 152.75, y: 414.19 },
-              c3: { x: 176.3, y: 431.83 },
-            },
-            {
-              type: "cubic",
-              segments: 10,
-              c0: { x: 176.3, y: 431.83 },
-              c1: { x: 199.15, y: 448.94 },
-              c2: { x: 221.03, y: 456.36 },
-              c3: { x: 248.5, y: 456.32 },
-            },
-            {
-              type: "cubic",
-              segments: 10,
-              c0: { x: 248.5, y: 456.32 },
-              c1: { x: 279.3, y: 456.28 },
-              c2: { x: 306.7, y: 445.66 },
-              c3: { x: 329.29, y: 425.02 },
-            },
-            {
-              type: "cubic",
-              c0: { x: 329.29, y: 425.02 },
-              c1: { x: 337.97, y: 417.08 },
-              c2: { x: 345.5, y: 415.09 },
-              c3: { x: 353.77, y: 418.55 },
-            },
-            {
-              type: "cubic",
-              c0: { x: 353.77, y: 418.55 },
-              c1: { x: 360.8, y: 421.49 },
-              c2: { x: 364.3, y: 426.18 },
-              c3: { x: 365.52, y: 434.31 },
-            },
-            {
-              type: "cubic",
-              c0: { x: 365.52, y: 434.31 },
-              c1: { x: 366.75, y: 442.46 },
-              c2: { x: 364.43, y: 446.55 },
-              c3: { x: 352.47, y: 457.36 },
-            },
-            {
-              type: "cubic",
-              c0: { x: 352.47, y: 457.36 },
-              c1: { x: 340.81, y: 467.91 },
-              c2: { x: 334.73, y: 472.19 },
-              c3: { x: 321.54, y: 479.13 },
-            },
-            {
-              type: "cubic",
-              c0: { x: 321.54, y: 479.13 },
-              c1: { x: 309.28, y: 485.59 },
-              c2: { x: 295.41, y: 490.48 },
-              c3: { x: 280.68, y: 493.55 },
-            },
-          ],
-        },
-
-        // =========================================================
-        // STROKE 1 (Blue) – Cloud + S-curve
-        // =========================================================
-        {
-          strokeIndex: 1,
-          segments: [
-            {
-              type: "cubic",
-              c0: { x: 550.5, y: 431.65 },
-              c1: { x: 546.66, y: 433.71 },
-              c2: { x: 539.6, y: 435.28 },
-              c3: { x: 537.5, y: 434.53 },
-            },
-            {
-              type: "cubic",
-              c0: { x: 537.5, y: 434.53 },
-              c1: { x: 536.95, y: 434.34 },
-              c2: { x: 535.25, y: 433.9 },
-              c3: { x: 533.72, y: 433.56 },
-            },
-            {
-              type: "cubic",
-              c0: { x: 533.72, y: 433.56 },
-              c1: { x: 529.76, y: 432.69 },
-              c2: { x: 523.56, y: 426.71 },
-              c3: { x: 519.82, y: 420.18 },
-            },
-            {
-              type: "cubic",
-              c0: { x: 519.82, y: 420.18 },
-              c1: { x: 515.17, y: 412.06 },
-              c2: { x: 503.09, y: 399.9 },
-              c3: { x: 493.13, y: 393.33 },
-            },
-            {
-              type: "cubic",
-              c0: { x: 493.13, y: 393.33 },
-              c1: { x: 477.31, y: 382.89 },
-              c2: { x: 463.24, y: 376.74 },
-              c3: { x: 444.4, y: 372.03 },
-            },
-            {
-              type: "cubic",
-              c0: { x: 444.4, y: 372.03 },
-              c1: { x: 430.65, y: 368.59 },
-              c2: { x: 423.58, y: 352.76 },
-              c3: { x: 429.94, y: 339.63 },
-            },
-            {
-              type: "cubic",
-              c0: { x: 429.94, y: 339.63 },
-              c1: { x: 433.21, y: 332.88 },
-              c2: { x: 437.38, y: 330.2 },
-              c3: { x: 450.79, y: 326.28 },
-            },
-            {
-              type: "cubic",
-              c0: { x: 450.79, y: 326.28 },
-              c1: { x: 471.84, y: 320.12 },
-              c2: { x: 484.51, y: 313.57 },
-              c3: { x: 499.04, y: 301.37 },
-            },
-            {
-              type: "cubic",
-              c0: { x: 499.04, y: 301.37 },
-              c1: { x: 519.33, y: 284.33 },
-              c2: { x: 533.68, y: 260.12 },
-              c3: { x: 539.02, y: 233.89 },
-            },
-            {
-              type: "cubic",
-              c0: { x: 539.02, y: 233.89 },
-              c1: { x: 541.29, y: 222.76 },
-              c2: { x: 541.77, y: 203.6 },
-              c3: { x: 540.05, y: 192.84 },
-            },
-            {
-              type: "cubic",
-              c0: { x: 540.05, y: 192.84 },
-              c1: { x: 532.57, y: 146.0 },
-              c2: { x: 497.94, y: 107.92 },
-              c3: { x: 451.29, y: 95.25 },
-            },
-            {
-              type: "cubic",
-              c0: { x: 451.29, y: 95.25 },
-              c1: { x: 442.24, y: 92.79 },
-              c2: { x: 440.03, y: 92.59 },
-              c3: { x: 422.0, y: 92.61 },
-            },
-            {
-              type: "cubic",
-              c0: { x: 422.0, y: 92.61 },
-              c1: { x: 404.19, y: 92.63 },
-              c2: { x: 401.66, y: 92.86 },
-              c3: { x: 392.87, y: 95.23 },
-            },
-            {
-              type: "cubic",
-              c0: { x: 392.87, y: 95.23 },
-              c1: { x: 359.36, y: 104.26 },
-              c2: { x: 331.39, y: 126.68 },
-              c3: { x: 316.79, y: 156.21 },
-            },
-            {
-              type: "cubic",
-              c0: { x: 316.79, y: 156.21 },
-              c1: { x: 313.04, y: 163.8 },
-              c2: { x: 311.06, y: 166.79 },
-              c3: { x: 310.0, y: 166.5 },
-            },
-            {
-              type: "cubic",
-              c0: { x: 310.0, y: 166.5 },
-              c1: { x: 309.17, y: 166.27 },
-              c2: { x: 303.95, y: 164.76 },
-              c3: { x: 298.39, y: 163.13 },
-            },
-            {
-              type: "cubic",
-              c0: { x: 298.39, y: 163.13 },
-              c1: { x: 292.84, y: 161.51 },
-              c2: { x: 284.74, y: 159.61 },
-              c3: { x: 280.39, y: 158.9 },
-            },
-            {
-              type: "cubic",
-              c0: { x: 280.39, y: 158.9 },
-              c1: { x: 276.05, y: 158.2 },
-              c2: { x: 272.39, y: 157.57 },
-              c3: { x: 272.26, y: 157.49 },
-            },
-            {
-              type: "cubic",
-              c0: { x: 272.26, y: 157.49 },
-              c1: { x: 271.61, y: 157.11 },
-              c2: { x: 277.49, y: 143.75 },
-              c3: { x: 282.08, y: 135.15 },
-            },
-            {
-              type: "cubic",
-              c0: { x: 282.08, y: 135.15 },
-              c1: { x: 294.59, y: 111.69 },
-              c2: { x: 312.28, y: 92.48 },
-              c3: { x: 335.31, y: 77.34 },
-            },
-            {
-              type: "cubic",
-              c0: { x: 335.31, y: 77.34 },
-              c1: { x: 396.76, y: 36.95 },
-              c2: { x: 477.68, y: 44.23 },
-              c3: { x: 531.21, y: 94.96 },
-            },
-            {
-              type: "cubic",
-              c0: { x: 531.21, y: 94.96 },
-              c1: { x: 562.23, y: 124.35 },
-              c2: { x: 578.9, y: 160.46 },
-              c3: { x: 581.62, y: 204.16 },
-            },
-            {
-              type: "cubic",
-              c0: { x: 581.62, y: 204.16 },
-              c1: { x: 582.99, y: 226.11 },
-              c2: { x: 577.35, y: 255.04 },
-              c3: { x: 567.54, y: 276.44 },
-            },
-            {
-              type: "cubic",
-              c0: { x: 567.54, y: 276.44 },
-              c1: { x: 554.84, y: 304.16 },
-              c2: { x: 532.1, y: 329.86 },
-              c3: { x: 505.32, y: 346.77 },
-            },
-            {
-              type: "cubic",
-              c0: { x: 505.32, y: 346.77 },
-              c1: { x: 502.94, y: 348.27 },
-              c2: { x: 501.01, y: 349.73 },
-              c3: { x: 501.02, y: 350.0 },
-            },
-            {
-              type: "cubic",
-              c0: { x: 501.02, y: 350.0 },
-              c1: { x: 501.04, y: 350.27 },
-              c2: { x: 504.57, y: 352.82 },
-              c3: { x: 508.87, y: 355.65 },
-            },
-            {
-              type: "cubic",
-              c0: { x: 508.87, y: 355.65 },
-              c1: { x: 520.01, y: 362.99 },
-              c2: { x: 536.0, y: 376.07 },
-              c3: { x: 542.03, y: 382.77 },
-            },
-            {
-              type: "cubic",
-              c0: { x: 542.03, y: 382.77 },
-              c1: { x: 552.73, y: 394.66 },
-              c2: { x: 559.97, y: 407.49 },
-              c3: { x: 559.99, y: 414.57 },
-            },
-            {
-              type: "cubic",
-              c0: { x: 559.99, y: 414.57 },
-              c1: { x: 560.01, y: 420.76 },
-              c2: { x: 555.42, y: 429.0 },
-              c3: { x: 550.5, y: 431.65 },
-            },
-          ],
-        },
-
-        // =========================================================
-        // STROKE 2 (Dark) – Right "D" + bottom
-        // =========================================================
-        {
-          strokeIndex: 2,
-          segments: [
-            {
-              type: "cubic",
-              c0: { x: 599.5, y: 494.2 },
-              c1: { x: 654.95, y: 480.58 },
-              c2: { x: 695.66, y: 445.71 },
-              c3: { x: 716.07, y: 394.32 },
-            },
-            {
-              type: "cubic",
-              c0: { x: 716.07, y: 394.32 },
-              c1: { x: 722.72, y: 377.58 },
-              c2: { x: 726.08, y: 358.32 },
-              c3: { x: 726.07, y: 337.0 },
-            },
-            {
-              type: "cubic",
-              c0: { x: 726.07, y: 337.0 },
-              c1: { x: 726.02, y: 266.1 },
-              c2: { x: 677.94, y: 203.25 },
-              c3: { x: 609.12, y: 184.13 },
-            },
-
-            {
-              type: "line",
-              from: { x: 609.12, y: 184.13 },
-              to: { x: 601.75, y: 182.08 },
-            },
-            {
-              type: "line",
-              from: { x: 601.75, y: 182.08 },
-              to: { x: 602.37, y: 186.29 },
-            },
-
-            {
-              type: "cubic",
-              c0: { x: 602.37, y: 186.29 },
-              c1: { x: 602.72, y: 188.61 },
-              c2: { x: 603.29, y: 198.16 },
-              c3: { x: 603.65, y: 207.52 },
-            },
-
-            {
-              type: "line",
-              from: { x: 603.65, y: 207.52 },
-              to: { x: 604.3, y: 224.54 },
-            },
-            {
-              type: "line",
-              from: { x: 604.3, y: 224.54 },
-              to: { x: 611.4, y: 227.38 },
-            },
-
-            {
-              type: "cubic",
-              c0: { x: 611.4, y: 227.38 },
-              c1: { x: 641.81, y: 239.56 },
-              c2: { x: 666.79, y: 265.29 },
-              c3: { x: 678.57, y: 296.58 },
-            },
-            {
-              type: "cubic",
-              c0: { x: 678.57, y: 296.58 },
-              c1: { x: 686.97, y: 318.91 },
-              c2: { x: 688.21, y: 345.79 },
-              c3: { x: 681.9, y: 368.72 },
-            },
-            {
-              type: "cubic",
-              c0: { x: 681.9, y: 368.72 },
-              c1: { x: 676.08, y: 389.86 },
-              c2: { x: 665.53, y: 407.48 },
-              c3: { x: 649.35, y: 423.06 },
-            },
-            {
-              type: "cubic",
-              c0: { x: 649.35, y: 423.06 },
-              c1: { x: 632.79, y: 439.02 },
-              c2: { x: 616.56, y: 447.98 },
-              c3: { x: 593.0, y: 454.18 },
-            },
-            {
-              type: "cubic",
-              c0: { x: 593.0, y: 454.18 },
-              c1: { x: 584.52, y: 456.42 },
-              c2: { x: 584.31, y: 456.42 },
-              c3: { x: 485.28, y: 456.75 },
-            },
-
-            {
-              type: "line",
-              from: { x: 485.28, y: 456.75 },
-              to: { x: 386.06, y: 457.07 },
-            },
-            {
-              type: "line",
-              from: { x: 386.06, y: 457.07 },
-              to: { x: 373.46, y: 469.04 },
-            },
-
-            {
-              type: "cubic",
-              c0: { x: 373.46, y: 469.04 },
-              c1: { x: 361.69, y: 480.21 },
-              c2: { x: 348.29, y: 490.73 },
-              c3: { x: 341.09, y: 494.45 },
-            },
-            {
-              type: "cubic",
-              c0: { x: 341.09, y: 494.45 },
-              c1: { x: 339.39, y: 495.33 },
-              c2: { x: 338.0, y: 496.28 },
-              c3: { x: 338.0, y: 496.56 },
-            },
-            {
-              type: "cubic",
-              c0: { x: 338.0, y: 496.56 },
-              c1: { x: 338.0, y: 496.83 },
-              c2: { x: 394.81, y: 496.91 },
-              c3: { x: 464.25, y: 496.73 },
-            },
-
-            {
-              type: "line",
-              from: { x: 464.25, y: 496.73 },
-              to: { x: 590.5, y: 496.41 },
-            },
-            {
-              type: "line",
-              from: { x: 590.5, y: 496.41 },
-              to: { x: 599.5, y: 494.2 },
-            },
-          ],
-        },
-      ];
-
-      const CLOUD_SHAPE = [
-        {
-          type: "cubic",
-          c0: { x: 510.61, y: 302.12 },
-          c1: { x: 511.85, y: 340.45 },
-          c2: { x: 511.67, y: 330.27 },
-          c3: { x: 510.46, y: 335.89 },
-        },
-        {
-          type: "cubic",
-          c0: { x: 510.46, y: 335.89 },
-          c1: { x: 502.82, y: 371.1 },
-          c2: { x: 477.35, y: 397.98 },
-          c3: { x: 442.86, y: 407.22 },
-        },
-        {
-          type: "cubic",
-          segments: 20,
-          c0: { x: 442.86, y: 407.22 },
-          c1: { x: 142.94, y: 410.02 },
-          c2: { x: 94.95, y: 409.8 },
-          c3: { x: 88.04, y: 408.96 },
-        },
-        {
-          type: "cubic",
-          c0: { x: 88.04, y: 408.96 },
-          c1: { x: 42.67, y: 403.42 },
-          c2: { x: 6.27, y: 367.0 },
-          c3: { x: 1.12, y: 322.0 },
-        },
-        {
-          type: "cubic",
-          c0: { x: 1.12, y: 322.0 },
-          c1: { x: 0.97, y: 300.14 },
-          c2: { x: 0.98, y: 300.09 },
-          c3: { x: 0.99, y: 300.0 },
-        },
-        {
-          type: "cubic",
-          c0: { x: 0.99, y: 300.0 },
-          c1: { x: 2.6, y: 285.17 },
-          c2: { x: 8.4, y: 269.68 },
-          c3: { x: 17.43, y: 256.1 },
-        },
-        {
-          type: "cubic",
-          c0: { x: 17.43, y: 256.1 },
-          c1: { x: 26.21, y: 242.9 },
-          c2: { x: 44.59, y: 227.8 },
-          c3: { x: 59.7, y: 221.38 },
-        },
-        {
-          type: "cubic",
-          c0: { x: 59.7, y: 221.38 },
-          c1: { x: 65.46, y: 218.93 },
-          c2: { x: 66.01, y: 218.43 },
-          c3: { x: 66.52, y: 215.11 },
-        },
-        {
-          type: "cubic",
-          c0: { x: 66.52, y: 215.11 },
-          c1: { x: 71.31, y: 184.17 },
-          c2: { x: 89.21, y: 162.44 },
-          c3: { x: 117.0, y: 153.84 },
-        },
-        {
-          type: "cubic",
-          c0: { x: 117.0, y: 153.84 },
-          c1: { x: 128.5, y: 150.28 },
-          c2: { x: 144.44, y: 150.5 },
-          c3: { x: 156.26, y: 154.37 },
-        },
-        {
-          type: "cubic",
-          c0: { x: 156.26, y: 154.37 },
-          c1: { x: 173.72, y: 162.48 },
-          c2: { x: 176.39, y: 164.0 },
-          c3: { x: 176.56, y: 164.0 },
-        },
-        {
-          type: "cubic",
-          c0: { x: 176.56, y: 164.0 },
-          c1: { x: 200.84, y: 123.29 },
-          c2: { x: 230.53, y: 100.63 },
-          c3: { x: 264.71, y: 91.86 },
-        },
-        {
-          type: "cubic",
-          c0: { x: 264.71, y: 91.86 },
-          c1: { x: 285.33, y: 86.56 },
-          c2: { x: 311.47, y: 86.7 },
-          c3: { x: 331.91, y: 92.21 },
-        },
-        {
-          type: "cubic",
-          c0: { x: 331.91, y: 92.21 },
-          c1: { x: 389.41, y: 107.71 },
-          c2: { x: 429.55, y: 158.15 },
-          c3: { x: 431.61, y: 217.5 },
-        },
-
-        // {
-        //   type: "line",
-        //   from: { x: 432.03, y: 229.5 },
-        //   to: { x: 438.26, y: 230.76 },
-        // },
-        {
-          type: "cubic",
-          c0: { x: 438.26, y: 230.76 },
-          c1: { x: 460.62, y: 235.28 },
-          c2: { x: 479.01, y: 246.18 },
-          c3: { x: 492.46, y: 262.88 },
-        },
-        {
-          type: "cubic",
-          c0: { x: 492.46, y: 262.88 },
-          c1: { x: 501.73, y: 274.39 },
-          c2: { x: 509.02, y: 290.16 },
-          c3: { x: 510.61, y: 302.12 },
-        },
-      ];
-
-      export const CLOUD_PATH_CONFIG = [
-        {
-          strokeIndex: 0,
-          segments: [...CLOUD_SHAPE],
-        },
-        {
-          strokeIndex: 1,
-          segments: [...CLOUD_SHAPE],
-        },
-        {
-          strokeIndex: 2,
-          segments: [...CLOUD_SHAPE],
-        },
-      ];
 
       // Helper: create N identical cloud strokes (lets us grow to 4 clouds mid-animation)
       const buildCloudPathConfig = (count) =>
@@ -793,43 +132,6 @@
       }
 
       // ============================================
-      // Easing Functions
-      // ============================================
-      const ease = {
-        cubicInOut: (t) =>
-          t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2,
-        backOut: (t) => {
-          const c1 = 1.70158;
-          const c3 = c1 + 1;
-          return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
-        },
-        expoOut: (t) => (t === 1 ? 1 : 1 - Math.pow(2, -10 * t)),
-        elasticOut: (t) => {
-          if (t === 0 || t === 1) return t;
-          return (
-            Math.pow(2, -10 * t) *
-              Math.sin(((t * 10 - 0.75) * (2 * Math.PI)) / 3) +
-            1
-          );
-        },
-        expoInOut: (t) => {
-          if (t === 0 || t === 1) return t;
-          if (t < 0.5) return Math.pow(2, 20 * t - 10) / 2;
-          return (2 - Math.pow(2, -20 * t + 10)) / 2;
-        },
-      };
-
-      function fit(value, inMin, inMax, outMin, outMax, easeFunc = null) {
-        let t = Math.max(0, Math.min(1, (value - inMin) / (inMax - inMin)));
-        if (easeFunc) t = easeFunc(t);
-        return outMin + (outMax - outMin) * t;
-      }
-
-      function lerp(a, b, t) {
-        return a + (b - a) * t;
-      }
-
-      // ============================================
       // Voxel Logo Class - Combined Cloud → Logo story
       // ============================================
       class VoxelLogo {
@@ -874,7 +176,7 @@
           // Timing (seconds) for each step in the loop
           this.timing = {
             appear: 1.1,
-            idle_clouds: 1.2,
+            idle_clouds: 1000,
             spin_add_cloud: 1.0,
             hold_four: 3.5,
             spin_to_logo: 1.0,
@@ -926,139 +228,18 @@
 
         createMaterials() {
           // Blue material for rings 1 & 2 (slightly emissive)
-          this.blueMaterial = new THREE.ShaderMaterial({
-            uniforms: { u_lightPosition: { value: this.lightPosition } },
-            side: THREE.DoubleSide,
-            vertexShader: `
-                              varying vec3 v_worldPosition;
-                              varying vec3 v_worldNormal;
-                              varying vec3 v_viewNormal;
-                              void main() {
-                                  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-                                  v_viewNormal = normalMatrix * normal;
-                                  v_worldNormal = normalize((vec4(v_viewNormal, 0.0) * viewMatrix).xyz);
-                                  v_worldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
-                              }
-                          `,
-            fragmentShader: `
-                              uniform vec3 u_lightPosition;
-                              varying vec3 v_worldPosition, v_worldNormal, v_viewNormal;
-                              void main() {
-                                  vec3 N = normalize(v_worldNormal);
-                                  vec3 L = normalize(u_lightPosition - v_worldPosition);
-                                  vec3 V = normalize(v_viewNormal);
-                                  float shade1 = max(0.0, dot(N, L)) / (length(u_lightPosition - v_worldPosition) * 0.38);
-                                  float shade2 = max(0.0, dot(V, vec3(0.5773)));
-                                  float rim = pow(1.0 - abs(dot(V, N)), 2.0);
-                                  float ambient = 0.25;
-                                  float glow = 0.25 + rim * 0.4;
-                                  float b = ambient + shade1 * 1.2 + shade2 * 1.05 + glow;
-                                  gl_FragColor = vec4(b * 0.45, b * 0.75, b * 1.05, 1.0);
-                              }
-                          `,
-          });
+          this.blueMaterial = new THREE.ShaderMaterial(
+            getBlueMaterialConfig(this.lightPosition, THREE.DoubleSide)
+          );
 
           // Dark material for ring 3
-          this.darkMaterial = new THREE.ShaderMaterial({
-            uniforms: { u_lightPosition: { value: this.lightPosition } },
-            side: THREE.DoubleSide,
-            vertexShader: `
-                              varying vec3 v_worldPosition;
-                              varying vec3 v_worldNormal;
-                              varying vec3 v_viewNormal;
-                              void main() {
-                                  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-                                  v_viewNormal = normalMatrix * normal;
-                                  v_worldNormal = normalize((vec4(v_viewNormal, 0.0) * viewMatrix).xyz);
-                                  v_worldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
-                              }
-                          `,
-            fragmentShader: `
-                              uniform vec3 u_lightPosition;
-                              varying vec3 v_worldPosition, v_worldNormal, v_viewNormal;
-                              void main() {
-                                  vec3 N = normalize(v_worldNormal);
-                                  vec3 L = normalize(u_lightPosition - v_worldPosition);
-                                  vec3 V = normalize(v_viewNormal);
-                                  float shade1 = max(0.0, dot(N, L)) / (length(u_lightPosition - v_worldPosition) * 0.5);
-                                  float shade2 = max(0.0, dot(V, vec3(0.5773)));
-                                  float rim = pow(1.0 - abs(dot(V, N)), 2.0);
-                                  float ambient = 0.22;
-                                  float b = ambient + shade1 * 0.6 + shade2 * 0.6 + rim * 0.4;
-                                  gl_FragColor = vec4(b * 0.35, b * 0.45, b * 0.65 + 0.1, 1.0);
-                              }
-                          `,
-          });
+          this.darkMaterial = new THREE.ShaderMaterial(
+            getDarkMaterialConfig(this.lightPosition, THREE.DoubleSide)
+          );
 
-          // Cyan rods connecting clouds while they spin
-          // this.rodMaterial = new THREE.ShaderMaterial({
-          //   uniforms: {
-          //     u_lightPosition: { value: this.lightPosition },
-          //     u_opacity: { value: 1 },
-          //   },
-          //   transparent: true,
-          //   depthWrite: false,
-          //   vertexShader: `
-          //                     varying vec3 v_worldPosition;
-          //                     varying vec3 v_worldNormal;
-          //                     varying vec3 v_viewNormal;
-          //                     void main() {
-          //                         gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-          //                         v_viewNormal = normalMatrix * normal;
-          //                         v_worldNormal = normalize((vec4(v_viewNormal, 0.0) * viewMatrix).xyz);
-          //                         v_worldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
-          //                     }
-          //                 `,
-          //   fragmentShader: `
-          //                     uniform vec3 u_lightPosition;
-          //                     uniform float u_opacity;
-          //                     varying vec3 v_worldPosition, v_worldNormal, v_viewNormal;
-          //                     void main() {
-          //                         vec3 N = normalize(v_worldNormal);
-          //                         vec3 L = normalize(u_lightPosition - v_worldPosition);
-          //                         float shade1 = max(0.0, dot(N, L)) / (length(u_lightPosition - v_worldPosition) * 0.35);
-          //                         float shade2 = max(0.0, dot(normalize(v_viewNormal), vec3(0.5773)));
-          //                         float brightness = 0.5 + shade1 * 0.35 + shade2 * 0.35;
-          //                         gl_FragColor = vec4(brightness * 0.45, brightness * 0.8, brightness * 1.1, clamp(u_opacity, 0.0, 1.0));
-          //                     }
-          //                 `,
-          // });
-          this.rodMaterial = new THREE.ShaderMaterial({
-            uniforms: {
-              u_lightPosition: { value: this.lightPosition },
-            },
-            vertexShader: `
-                        varying vec3 v_worldPosition;
-                        varying vec3 v_worldNormal;
-                        varying vec3 v_viewNormal;
-
-                        void main() {
-                            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-                            v_viewNormal = normalMatrix * normal;
-                            v_worldNormal = normalize((vec4(v_viewNormal, 0.0) * viewMatrix).xyz);
-                            v_worldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
-                        }
-                    `,
-            fragmentShader: `
-                        uniform vec3 u_lightPosition;
-                        varying vec3 v_worldPosition;
-                        varying vec3 v_worldNormal;
-                        varying vec3 v_viewNormal;
-
-                        void main() {
-                            vec3 VN = normalize(v_viewNormal);
-                            vec3 N = normalize(v_worldNormal);
-                            vec3 L = normalize(u_lightPosition - v_worldPosition);
-
-                            float shade1 = max(0.0, dot(N, L)) / (length(u_lightPosition - v_worldPosition) * 0.4);
-                            float shade2 = max(0.0, dot(VN, vec3(0.5773)));
-
-                            // Bright glow effect
-                            float brightness = 0.5 + shade1 * 0.3 + shade2 * 0.3;
-                            gl_FragColor = vec4(brightness * 0.5, brightness * 0.7, brightness, 1.0);
-                        }
-                    `,
-          });
+          this.rodMaterial = new THREE.ShaderMaterial(
+            getRodMaterialConfig(this.lightPosition)
+          );
         }
 
         createVoxelSystem() {
@@ -1066,10 +247,13 @@
           this.spinPivot = new THREE.Object3D();
           this.logoOuterContainer = new THREE.Object3D();
 
-          this.boxGeometry = new THREE.BoxGeometry(1, 1, 1);
+          this.boxGeometry = new THREE.BoxGeometry(0.75, 0.75, 0.75);
 
           // Generate positions for 3 interlocking rings (logo form)
           const offsetX = 380;
+
+          this.pivotOffset = { x: 0.61, y: 0, z: 0 };
+
           const centerRingByStrokeIndex = [
             { x: -100 + offsetX, y: 0 },
             { x: -85 + offsetX, y: -40 },
@@ -1087,32 +271,49 @@
           // Adjust these anchors to shift each cloud (laid out as a rhombus; last entry = bonus cloud)
           const cloudCenters = [
             { x: 220, y: -150 }, // top (pull in from edge)
-            { x: 0, y: 50 }, // left
-            { x: 420, y: 20 }, // right
-            { x: 200, y: 200 }, // bottom (appears when we add the 4th cloud)
+            { x: 50, y: 30 }, // left
+            { x: 400, y: 30 }, // right
+            { x: 220, y: 180 }, // bottom (appears when we add the 4th cloud)
           ];
           const scaledCloudCenters = cloudCenters.map((p) => ({
             x: p.x * spread,
             y: p.y * spread,
           }));
+
+          // const cloudVoxels = [];
+
           const cloudVoxels = this.generateItemPositions(
             buildCloudPathConfig(scaledCloudCenters.length),
             5.8,
             scaledCloudCenters
           );
+          cloudVoxels.forEach((cloud, cloudIndex) => {
+            cloud.forEach((point) => {
+              console.log(point);
+              point.x = point.x - this.pivotOffset.x / (1 * 0.175);
+              point.y = point.y - this.pivotOffset.y / (1 * 0.175);
+              point.z = point.z - this.pivotOffset.z / (1 * 0.175);
+            });
+          });
 
           console.log("Generated logo voxels:", cloudVoxels);
 
-          this.rods = [];
-
-          this.createRod(cloudVoxels[0][15], cloudVoxels[1][100]); // Top to Left
-          this.createRod(cloudVoxels[0][20], cloudVoxels[2][45]); // Top to Right
-          this.createRod(cloudVoxels[1][100], cloudVoxels[2][45]); // Left to Right
-
-          // Base anchors for rods and spinning
+          // Base anchors for rods and spinning - compute first for rod positioning
           this.cloudAnchors = cloudVoxels.map((points) =>
             this.computeAnchor(points)
           );
+
+          // Create rods connecting cloud centers for maximum visibility
+          this.rods = [];
+
+          this.createRod(cloudVoxels[0][35], cloudVoxels[1][80]); // Top to Left
+          this.createRod(cloudVoxels[0][9], cloudVoxels[2][80]); // Top to Right
+          this.createRod(cloudVoxels[1][10], cloudVoxels[2][30]); // Left to Right
+
+          // Extra rods when 4th cloud appears
+          // this.createRod(cloudVoxels[1][20], cloudVoxels[3][45]); // Left to bottom
+          // this.createRod(cloudVoxels[2][20], cloudVoxels[3][102]); // Right to bottom
+
           this.ringAnchors = ringVoxels.map((points) =>
             this.computeAnchor(points)
           );
@@ -1121,6 +322,7 @@
 
           // Create voxel objects with both cloud and ring positions
           const materials = [
+            this.blueMaterial,
             this.blueMaterial,
             this.blueMaterial,
             this.darkMaterial,
@@ -1138,9 +340,17 @@
               cloudPositions.length
             );
 
+            console.log(
+              `Creating voxel group ${groupIndex}:`,
+              maxCount,
+              "voxels"
+            );
+
             for (let i = 0; i < maxCount; i++) {
               const ringPos = ringPositions[i % ringPositions.length];
               const cloudPos = cloudPositions[i % cloudPositions.length];
+
+              const defaultCloudPos = cloudPositions[0];
 
               const mesh = new THREE.Mesh(this.boxGeometry, material);
               const container = new THREE.Object3D();
@@ -1154,25 +364,34 @@
                 cloudPos: { ...cloudPos },
                 ringPos: { ...ringPos },
                 currentPos: { ...cloudPos },
+                startPos: { ...defaultCloudPos },
                 scale: 0,
                 // delay: groupIndex * 0.25 + i * 0.01,
-                delay: groupIndex * 0.25,
+                delay: groupIndex == 0 || groupIndex == 3 ? 0 : 0.25,
               });
             }
           }
 
+          this.spinPivot.position.set(
+            this.pivotOffset.x,
+            this.pivotOffset.y,
+            this.pivotOffset.z
+          );
+
           this.logoContainer.scale.setScalar(0.175);
+
           this.spinPivot.add(this.logoContainer);
           this.logoOuterContainer.add(this.spinPivot);
           this.scene.add(this.logoOuterContainer);
         }
-        createRod(from, to) {
-          const rod = new THREE.Object3D();
 
-          // Calculate direction and length
+        createRod(from, to) {
+          // Calculate direction and length with fallback for z
+          const fromZ = from.z !== undefined ? from.z : 1;
+          const toZ = to.z !== undefined ? to.z : 1;
           const dx = to.x - from.x;
           const dy = to.y - from.y;
-          const dz = to.z - from.z;
+          const dz = toZ - fromZ;
           const length = Math.sqrt(dx * dx + dy * dy + dz * dz);
 
           const geometry = new THREE.BoxGeometry(1, 1, 1);
@@ -1181,20 +400,20 @@
           const mesh = new THREE.Mesh(geometry, this.rodMaterial);
           const container = new THREE.Object3D();
 
-          // Position at midpoint
+          // Position at midpoint between two points
           container.position.set(
             (from.x + to.x) / 2,
             (from.y + to.y) / 2,
-            (from.z + to.z) / 2
+            (fromZ + toZ) / 2
           );
 
-          // Scale to create VISIBLE rod (thicker)
-          container.scale.set(0.1, 0.1, length);
-
-          console.log("Rod length:", length);
+          // Scale to create HIGHLY VISIBLE rod - thick and bright!
+          const rodThickness = 0.01; // Very thick for maximum visibility
+          container.scale.set(rodThickness, rodThickness, length);
 
           // Rotate to point from -> to
-          container.lookAt(to.x, to.y, to.z);
+          const targetPos = new THREE.Vector3(to.x, to.y, toZ);
+          container.lookAt(targetPos);
 
           container.add(mesh);
           this.logoContainer.add(container);
@@ -1204,13 +423,15 @@
             container,
             delay: 1.5 * 0.45,
             length: length,
+            from: { x: from.x, y: from.y, z: fromZ },
+            to: { x: to.x, y: to.y, z: toZ },
           });
         }
         generateItemPositions(
           configs,
           defaultScale = 12,
           centerByStrokeIndex = [],
-          customZ = false
+          customZ = undefined
         ) {
           const strokeCount =
             centerByStrokeIndex.length ||
@@ -1247,27 +468,10 @@
               strokes[strokeIndex].push({
                 x: vx,
                 y: vy,
-                z: customZ ? (strokeIndex < 2 ? 1 : 0) : 1,
+                z: customZ ? (strokeIndex < 2 ? 3 : 2) : 2,
                 size: voxelSize,
               });
             }
-          };
-
-          // Helper: Cubic bezier point
-          const cubicBezier = (p0, p1, p2, p3, t) => {
-            const mt = 1 - t;
-            return {
-              x:
-                mt * mt * mt * p0.x +
-                3 * mt * mt * t * p1.x +
-                3 * mt * t * t * p2.x +
-                t * t * t * p3.x,
-              y:
-                mt * mt * mt * p0.y +
-                3 * mt * mt * t * p1.y +
-                3 * mt * t * t * p2.y +
-                t * t * t * p3.y,
-            };
           };
 
           // Helper: Generate cubic bezier curve
@@ -1383,74 +587,6 @@
           return center;
         }
 
-        // Bezier curve helper function
-        bezierCurve(points, segments) {
-          const result = [];
-          for (let i = 0; i <= segments; i++) {
-            const t = i / segments;
-            const point = this.bezierPoint(points, t);
-            result.push(point);
-          }
-          return result;
-        }
-
-        bezierPoint(points, t) {
-          if (points.length === 1) return points[0];
-
-          const newPoints = [];
-          for (let i = 0; i < points.length - 1; i++) {
-            newPoints.push({
-              x: points[i].x + (points[i + 1].x - points[i].x) * t,
-              y: points[i].y + (points[i + 1].y - points[i].y) * t,
-              z: points[i].z + (points[i + 1].z - points[i].z) * t,
-            });
-          }
-          return this.bezierPoint(newPoints, t);
-        }
-
-        updateRods(anchors = [], opacity = 1) {
-          const pairs = [];
-          for (let i = 0; i < anchors.length; i++) {
-            for (let j = i + 1; j < anchors.length; j++) {
-              pairs.push([anchors[i], anchors[j]]);
-            }
-          }
-
-          // Expand pool if needed
-          // while (this.rodPool.length < pairs.length) {
-          //   const mesh = new THREE.Mesh(this.rodGeometry, this.rodMaterial);
-          //   const container = new THREE.Object3D();
-          //   container.add(mesh);
-          //   this.rodContainer.add(container);
-          //   this.rodPool.push({ mesh, container });
-          // }
-
-          // this.rodPool.forEach((rod, idx) => {
-          //   if (idx >= pairs.length) {
-          //     rod.container.visible = false;
-          //     return;
-          //   }
-          //   const [a, b] = pairs[idx];
-          //   const start = a.clone();
-          //   const end = b.clone();
-          //   const direction = end.clone().sub(start);
-          //   const length = Math.max(0.15, direction.length());
-          //   const midpoint = start.clone().add(end).multiplyScalar(0.5);
-
-          //   rod.container.visible = opacity > 0.01;
-          //   rod.mesh.visible = rod.container.visible;
-          //   rod.mesh.material.uniforms.u_opacity.value = opacity;
-
-          //   rod.container.position.copy(midpoint);
-          //   rod.container.lookAt(end);
-          //   rod.container.scale.set(
-          //     this.rodThickness,
-          //     this.rodThickness,
-          //     length
-          //   );
-          // });
-        }
-
         createPostProcessing() {
           const quadGeometry = new THREE.PlaneGeometry(2, 2);
 
@@ -1464,7 +600,7 @@
               u_color: { value: this.color },
               u_mouseXY: { value: new THREE.Vector2(0, 0) },
               u_resolution: { value: new THREE.Vector2(1, 1) },
-              u_brightness: { value: 2.05 },
+              u_brightness: { value: 1.8 },
             },
             vertexShader: `
                               varying vec2 v_uv;
@@ -1518,60 +654,6 @@
           });
 
           this.postQuad = new THREE.Mesh(quadGeometry, this.postMaterial);
-        }
-
-        bindEvents() {
-          window.addEventListener("resize", () => this.resize());
-
-          this.canvas.addEventListener("mousemove", (e) => {
-            const rect = this.canvas.getBoundingClientRect();
-            this.mouseX = e.clientX - rect.left;
-            this.mouseY = e.clientY - rect.top;
-          });
-
-          this.canvas.addEventListener("mouseleave", () => {
-            this.mouseX = this.domWidth / 2;
-            this.mouseY = this.domHeight / 2;
-          });
-        }
-
-        resize() {
-          const rect = this.canvas.getBoundingClientRect();
-          const width = rect.width;
-          const height = rect.height;
-
-          this.domWidth = width;
-          this.domHeight = height;
-
-          const pixelSize = fit(height, 400, 1000, 12, 20);
-
-          const pixelHeight = Math.ceil(height / pixelSize);
-          const pixelWidth = Math.ceil(width / ((pixelSize * 50) / 84));
-          this.lowRenderTarget.setSize(
-            pixelWidth * this.pixelScale,
-            pixelHeight * this.pixelScale
-          );
-          this.highRenderTarget.setSize(
-            pixelWidth * this.pixelScale,
-            pixelHeight * this.pixelScale
-          );
-          this.postMaterial.uniforms.u_sceneTextureSize.value.set(
-            pixelWidth,
-            pixelHeight
-          );
-
-          const dpr = Math.min(window.devicePixelRatio, 2);
-          this.renderer.setSize(width * dpr, height * dpr, false);
-          this.canvas.style.width = `${width}px`;
-          this.canvas.style.height = `${height}px`;
-
-          const aspect = width / height;
-          this.camera.left = -aspect;
-          this.camera.right = aspect;
-          this.camera.updateProjectionMatrix();
-
-          this.mouseX = width / 2;
-          this.mouseY = height / 2;
         }
 
         onPhaseEnter(phase) {
@@ -1643,17 +725,11 @@
           vec.unproject(this.camera);
           vec.z = 5;
           this.lightPosition.copy(vec);
+          let mergeProgress = 0;
+          let splitProgress = 0;
+          let spinProgress = 0;
 
-          const mergeProgress =
-            this.phase === "spin_to_logo"
-              ? ease.cubicInOut(phaseProgress)
-              : this.phase === "hold_logo"
-              ? 1
-              : 0;
-          const splitProgress =
-            this.phase === "spin_back_clouds"
-              ? ease.expoInOut(phaseProgress)
-              : 0;
+          let morphRaw = 0;
 
           const extraActivePhases = [
             "spin_add_cloud",
@@ -1662,102 +738,81 @@
             "hold_logo",
             "spin_back_clouds",
           ];
-          const extraActive = extraActivePhases.includes(this.phase);
-          const targetExtraVisibility = extraActive
-            ? this.phase === "spin_add_cloud"
-              ? ease.cubicInOut(
-                  fit(phaseTime, duration * 0.1, duration * 0.9, 0, 1)
-                )
-              : this.phase === "hold_four" ||
-                this.phase === "spin_to_logo" ||
-                this.phase === "hold_logo"
-              ? 1
-              : 1 -
-                ease.cubicInOut(
-                  fit(phaseTime, duration * 0.1, duration * 0.9, 0, 1)
-                )
-            : 0;
-
-          // Smoothed extra cloud visibility (prevents phase pop)
-          if (this.extraVisibility === undefined) this.extraVisibility = 0;
-          const alphaLerp = Math.min(1, delta * 1.5); // slower blend to remove pops
-          this.extraVisibility = lerp(
-            this.extraVisibility,
-            targetExtraVisibility,
-            alphaLerp
-          );
-          const extraVisibility = this.extraVisibility;
 
           const spinPhases = [
             "spin_add_cloud",
             "spin_to_logo",
             "spin_back_clouds",
           ];
+          const extraActive = extraActivePhases.includes(this.phase);
           const inSpin = spinPhases.includes(this.phase);
-          const spinProgress = inSpin ? ease.expoInOut(phaseProgress) : 0;
-          const targetRotationY = inSpin
-            ? lerp(this.spinStartAngle, this.spinTargetAngle, spinProgress)
-            : this.spinAngle + Math.sin(elapsed * 0.2) * 0.04;
-          const rotLerp = Math.min(1, delta * 4.5);
-          this.spinSmoothedY = lerp(
-            this.spinSmoothedY,
-            targetRotationY,
-            rotLerp
-          );
+
+          spinProgress = inSpin ? ease.expoInOut(phaseProgress) : 0;
+
+          switch (this.phase) {
+            case "appear":
+              break;
+            case "idle_clouds":
+              break;
+            case "spin_add_cloud":
+              spinProgress = ease.expoInOut(phaseProgress);
+              break;
+            case "hold_four":
+              break;
+            case "spin_to_logo":
+              mergeProgress = ease.cubicInOut(phaseProgress);
+              morphRaw = mergeProgress;
+              spinProgress = ease.expoInOut(phaseProgress);
+              break;
+            case "hold_logo":
+              mergeProgress = 1;
+              break;
+            case "spin_back_clouds":
+              splitProgress = ease.expoInOut(phaseProgress);
+              morphRaw = 1 - splitProgress;
+              spinProgress = inSpin ? ease.expoInOut(phaseProgress) : 0;
+              break;
+            case "hold_clouds":
+              break;
+            default:
+              break;
+          }
+
+          // this.spinSmoothedY = lerp(
+          //   this.spinSmoothedY,
+          //   targetRotationY,
+          //   rotLerp
+          // );
 
           // Slight wobble keeps the voxel stacks lively (reduced for smoothness)
-          this.logoContainer.rotation.set(
-            -0.05 + Math.sin(elapsed * 0.2) * 0.03,
-            this.spinSmoothedY,
-            Math.cos(elapsed * 0.16) * 0.03
-          );
+          // this.logoContainer.rotation.set(
+          //   -0.05 + Math.sin(elapsed * 0.2) * 0.03,
+          //   this.spinSmoothedY,
+          //   Math.cos(elapsed * 0.16) * 0.03
+          // );
 
           // Camera-facing tilt
-          this.logoOuterContainer.rotation.set(-0.25, Math.PI * 0.16, 0.06);
+          // this.spinPivot.rotation.set(
+          //   0,
+          //   (Math.PI * elapsed) % (Math.PI * 2),
+          //   0
+          // );
+
           this.logoOuterContainer.position.set(0, 0.02, 0);
 
-          // === Rod logic: temporarily disabled to remove connecting lines ===
-          // To re-enable connections, set rodsEnabled = true and adjust opacity below.
-          const rodAnchors = []; // empty means no rods drawn
-          const rodsEnabled = false;
-          const rodOpacity = 0;
-          this.updateRods(rodAnchors, rodsEnabled ? rodOpacity : 0);
-
           // === Center pivot for spinning: keep rotation around the visible mass ===
-          const morphRaw =
-            this.phase === "spin_to_logo" || this.phase === "hold_logo"
-              ? mergeProgress || 1
-              : this.phase === "spin_back_clouds"
-              ? 1 - splitProgress
-              : 0;
 
           const morphBlendLerp = Math.min(1, delta * 3);
           this.morphBlend = lerp(this.morphBlend, morphRaw, morphBlendLerp);
 
-          const activeAnchors = [];
-          this.cloudAnchors.forEach((cloudAnchor, idx) => {
-            const ringAnchor = this.ringAnchors[idx % this.ringAnchors.length];
-            const isExtra = idx === this.extraCloudIndex;
-            const visibility = isExtra ? extraVisibility : 1;
-            if (visibility > 0.02) {
-              const blended = cloudAnchor
-                .clone()
-                .lerp(ringAnchor, this.morphBlend);
-              activeAnchors.push(blended);
-            }
-          });
-
-          let center = new THREE.Vector3();
-          if (activeAnchors.length) {
-            activeAnchors.forEach((a) => center.add(a));
-            center.divideScalar(activeAnchors.length);
-          }
-          // Smooth center to avoid micro-jumps while spinning
-          const centerLerp = Math.min(1, delta * 1.2);
-          this.smoothedCenter.lerp(center, centerLerp);
-
           // Re-center the container so spinPivot rotates around the mass center
-          this.spinPivot.position.copy(this.smoothedCenter);
+
+          this.spinPivot.position.set(
+            this.pivotOffset.x,
+            this.pivotOffset.y,
+            this.pivotOffset.z
+          );
+
           this.logoContainer.position.copy(
             this.smoothedCenter.clone().multiplyScalar(-1)
           );
@@ -1773,8 +828,9 @@
 
               const targetScaleZ = rod.length;
               const scaleZ = lerp(0.01, targetScaleZ, appearProgress);
+              const rodThickness = 0.3; // Match the thickness from createRod
 
-              rod.container.scale.set(0.1, 0.1, scaleZ);
+              rod.container.scale.set(rodThickness, rodThickness, scaleZ);
             });
           }
 
@@ -1784,10 +840,10 @@
             let targetX = voxel.cloudPos.x;
             let targetY = voxel.cloudPos.y;
             let targetZ = voxel.cloudPos.z;
-            let scale = isExtra ? extraVisibility : 1;
+            let scale = 1;
 
             const morphDamp = 1 - this.morphBlend * 0.65;
-            const bobScale = (isExtra ? extraVisibility : 1) * morphDamp;
+            const bobScale = morphDamp;
             const bobX =
               (Math.sin(elapsed * 2 + index * 0.12) * 0.035 +
                 Math.sin(elapsed * 0.7 + voxel.groupIndex) * 0.02) *
@@ -1797,66 +853,81 @@
                 Math.cos(elapsed * 0.5 + voxel.groupIndex) * 0.02) *
               bobScale;
 
-            if (this.phase === "appear") {
-              const appearProgress = fit(
-                phaseTime,
-                voxel.delay * 0.45,
-                voxel.delay * 0.45 + 0.9,
-                0,
-                1,
-                ease.expoOut
-              );
-              const startOffset =
-                this.appearType === "scale"
-                  ? { x: 0, y: 0, z: 0 }
-                  : voxel.groupIndex === 0
-                  ? { x: 0, y: 3, z: 0 }
-                  : voxel.groupIndex === 1
-                  ? { x: -4, y: 0, z: 0 }
-                  : { x: 4, y: 0, z: 0 };
-              targetX = lerp(
-                voxel.cloudPos.x + startOffset.x,
-                voxel.cloudPos.x,
-                appearProgress
-              );
-              targetY = lerp(
-                voxel.cloudPos.y + startOffset.y,
-                voxel.cloudPos.y,
-                appearProgress
-              );
-              targetZ = lerp(
-                voxel.cloudPos.z + startOffset.z,
-                voxel.cloudPos.z,
-                appearProgress
-              );
-              scale = isExtra ? 0 : appearProgress;
-            } else {
-              const morph = this.morphBlend;
-              targetX = lerp(voxel.cloudPos.x, voxel.ringPos.x, morph);
-              targetY = lerp(voxel.cloudPos.y, voxel.ringPos.y, morph);
-              targetZ = lerp(voxel.cloudPos.z, voxel.ringPos.z, morph);
+            const morph = this.morphBlend;
+            targetX = lerp(voxel.cloudPos.x, voxel.ringPos.x, morph);
+            targetY = lerp(voxel.cloudPos.y, voxel.ringPos.y, morph);
+            targetZ = lerp(voxel.cloudPos.z, voxel.ringPos.z, morph);
 
-              if (morph < 0.999) {
-                targetX += bobX;
-                targetY += bobY;
-              }
-            }
+            switch (this.phase) {
+              case "appear":
+                const appearProgress = fit(
+                  phaseTime,
+                  voxel.delay * 0.45,
+                  voxel.delay * 0.45 + 0.9,
+                  0,
+                  1,
+                  ease.expoOut
+                );
 
-            if (this.phase === "spin_add_cloud" && isExtra) {
-              scale *= extraVisibility;
-            }
-            if (this.phase === "hold_logo") {
-              scale *= 1.05;
+                let startOffset;
+                switch (voxel.groupIndex) {
+                  case 0:
+                    startOffset = { x: 0, y: 3, z: 0 };
+                    break;
+                  case 1:
+                    startOffset = { x: -4, y: 0, z: 0 };
+
+                    break;
+                  case 2:
+                    startOffset = { x: 4, y: 0, z: 0 };
+
+                    break;
+                  case 3:
+                    startOffset = { x: 0, y: -3, z: 0 };
+
+                    break;
+                  default:
+                }
+
+                targetX = lerp(
+                  voxel.cloudPos.x + startOffset.x,
+                  voxel.cloudPos.x,
+                  appearProgress
+                );
+                targetY = lerp(
+                  voxel.cloudPos.y + startOffset.y,
+                  voxel.cloudPos.y,
+                  appearProgress
+                );
+                targetZ = lerp(
+                  voxel.cloudPos.z + startOffset.z,
+                  voxel.cloudPos.z,
+                  appearProgress
+                );
+                scale = appearProgress;
+                break;
+              case "idle_clouds":
+                break;
+              case "spin_add_cloud":
+                spinProgress = ease.expoInOut(phaseProgress);
+                break;
+              case "hold_four":
+                break;
+              case "spin_to_logo":
+                break;
+              case "hold_logo":
+                break;
+              case "spin_back_clouds":
+                break;
+              case "hold_clouds":
+                break;
+              default:
+                break;
             }
 
             voxel.container.position.set(targetX, targetY, targetZ);
-            let visualScale = Math.max(0, scale);
-            if (isExtra && !extraActive) {
-              visualScale = 0; // hide the 4th cloud outside active phases
-            } else if (visualScale > 0) {
-              visualScale = Math.max(0.05, visualScale);
-            }
-            voxel.container.scale.setScalar(0.62 * visualScale);
+
+            voxel.container.scale.setScalar(0.62);
           });
 
           // Render
@@ -1888,6 +959,60 @@
           this.renderer.render(copyQuad, this.camera);
           copyMaterial.dispose();
           copyQuad.geometry.dispose();
+        }
+
+        bindEvents() {
+          window.addEventListener("resize", () => this.resize());
+
+          this.canvas.addEventListener("mousemove", (e) => {
+            const rect = this.canvas.getBoundingClientRect();
+            this.mouseX = e.clientX - rect.left;
+            this.mouseY = e.clientY - rect.top;
+          });
+
+          this.canvas.addEventListener("mouseleave", () => {
+            this.mouseX = this.domWidth / 2;
+            this.mouseY = this.domHeight / 2;
+          });
+        }
+
+        resize() {
+          const rect = this.canvas.getBoundingClientRect();
+          const width = rect.width;
+          const height = rect.height;
+
+          this.domWidth = width;
+          this.domHeight = height;
+
+          const pixelSize = fit(height, 400, 1000, 12, 20);
+
+          const pixelHeight = Math.ceil(height / pixelSize);
+          const pixelWidth = Math.ceil(width / ((pixelSize * 50) / 84));
+          this.lowRenderTarget.setSize(
+            pixelWidth * this.pixelScale,
+            pixelHeight * this.pixelScale
+          );
+          this.highRenderTarget.setSize(
+            pixelWidth * this.pixelScale,
+            pixelHeight * this.pixelScale
+          );
+          this.postMaterial.uniforms.u_sceneTextureSize.value.set(
+            pixelWidth,
+            pixelHeight
+          );
+
+          const dpr = Math.min(window.devicePixelRatio, 2);
+          this.renderer.setSize(width * dpr, height * dpr, false);
+          this.canvas.style.width = `${width}px`;
+          this.canvas.style.height = `${height}px`;
+
+          const aspect = width / height;
+          this.camera.left = -aspect;
+          this.camera.right = aspect;
+          this.camera.updateProjectionMatrix();
+
+          this.mouseX = width / 2;
+          this.mouseY = height / 2;
         }
       }
 
