@@ -453,21 +453,21 @@
           this.boxGeometry = new THREE.BoxGeometry(0.75, 0.75, 0.75);
 
           // Generate positions for 3 interlocking rings (logo form)
-          // const offsetX = 380;
+          const offsetX = 380;
 
           // this.pivotOffset = { x: 0.61, y: 0, z: 0 };
 
-          // const centerRingByStrokeIndex = [
-          //   { x: -100 + offsetX, y: 0 },
-          //   { x: -85 + offsetX, y: -40 },
-          //   { x: 0 + offsetX, y: 0 },
-          // ];
-          // const ringVoxels = this.generateItemPositions(
-          //   LOGO_PATH_CONFIG,
-          //   12,
-          //   centerRingByStrokeIndex,
-          //   true
-          // );
+          const centerRingByStrokeIndex = [
+            { x: -100 + offsetX, y: 0 },
+            { x: -85 + offsetX, y: -40 },
+            { x: 0 + offsetX, y: 0 },
+          ];
+          const ringVoxels = this.generateItemPositions(
+            LOGO_PATH_CONFIG,
+            12,
+            centerRingByStrokeIndex,
+            true
+          );
 
           // // Generate positions for 4 clouds (3 base + 1 that fades in during spin)
           // const spread = 3;

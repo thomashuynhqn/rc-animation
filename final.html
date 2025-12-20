@@ -144,9 +144,10 @@
             "spin_add_cloud",
             "hold_pyramid",
             "spin_show_logo",
+            "hold_logo",
             "logo_extract",
           ];
-          this.loopStartIndex = 1; // Loop from cloud_idle (skip appear)
+          this.loopStartIndex = 2; // Loop from cloud_idle (skip appear)
           this.phaseIndex = 0;
           this.phase = this.phases[this.phaseIndex];
           this.phaseStartTime = 0;
@@ -154,11 +155,12 @@
           // Timing (seconds) for each step
           this.timing = {
             appear: 2,
-            cloud_idle: 1,
-            spin_add_cloud: 2.5,
-            hold_pyramid: 3,
-            spin_show_logo: 3.0,
-            logo_extract: 3.0,
+            cloud_idle: 0.1,
+            spin_add_cloud: 2,
+            hold_pyramid: 2,
+            spin_show_logo: 2,
+            hold_logo: 2,
+            logo_extract: 2,
           };
 
           // Cloud positions
@@ -175,20 +177,20 @@
           // ];
           this.originalCloudPositions = [
             { x: 0, y: 1.4, z: 0, scale: 1.6 }, // Top cloud (large)
-            { x: -1.2, y: -0.5, z: 0.6, scale: 1.1 }, // Bottom-left cloud
-            { x: 1.2, y: -0.5, z: -0.4, scale: 1.2 }, // Bottom-right cloud
+            { x: -1.2, y: -1, z: 0.6, scale: 1.1 }, // Bottom-left cloud
+            { x: 1.2, y: -1, z: -1, scale: 1.2 }, // Bottom-right cloud
             { x: 0, y: -0.5, z: 1, scale: 1.2 }, // Bottom-right cloud
           ];
-          this.logoPosition = { x: 0, y: 0, z: 0 }; // Center position for logo
           this.cloudScaleDefault = 0.5;
+          this.logoPosition = { x: 0, y: 0.2, z: 0 };
 
           // Pyramid positions (for spin_add_cloud phase)
           // Cloud 0 stays at top (apex), clouds 1 and 2 form base triangle
           this.pyramidPositions = [
             { x: 0, y: 1.4, z: 0, scale: 1.6 }, // Top cloud (large)
-            { x: -1.2, y: -0.5, z: 0.6, scale: 1.1 }, // Bottom-left cloud
-            { x: 1.2, y: -0.5, z: -0.4, scale: 1.2 }, // Bottom-right cloud
-            { x: 0, y: -0.5, z: 1, scale: 1.2 }, // Bottom-right cloud
+            { x: -1.2, y: -1, z: 0.6, scale: 1.1 }, // Bottom-left cloud
+            { x: 1.2, y: -1, z: -1, scale: 1.2 }, // Bottom-right cloud
+            { x: 0, y: -1, z: 1, scale: 1.2 }, // Bottom-right cloud
           ];
 
           // Define use the old clouds
@@ -197,7 +199,6 @@
           // 4th cloud and logo tracking
           this.logoContainer = null;
           this.originalRods = []; // Store original 3 rods
-          this.fourCloudRods = []; // Store rods connecting 4 clouds
 
           this.init();
         }
@@ -351,43 +352,59 @@
           this.originalRods = [rod1, rod2, rod3, rod4, rod5, rod6];
 
           // Create logo container (simple geometric shape - a cube with some detail)
-          this.logoContainer = new THREE.Object3D();
-          this.logoContainer.visible = false;
+          this.logoContainer2 = new THREE.Object3D();
+          this.logoContainer.visible = true;
 
           // Create a simple logo - a stylized "Z" or geometric shape
           const logoGeometry = new THREE.BoxGeometry(1, 1, 1);
           const logoSize = 0.8;
 
-          // Create a simple "Z" shape using cubes
-          const zCubes = [
-            { x: -0.5, y: 0.5, z: 0, scale: [1.2, 0.2, 0.2] }, // Top horizontal
-            { x: 0, y: 0, z: 0, scale: [0.2, 1.0, 0.2] }, // Diagonal (simplified as vertical)
-            { x: 0.5, y: -0.5, z: 0, scale: [1.2, 0.2, 0.2] }, // Bottom horizontal
+          const offsetX = 380;
+          const centerRingByStrokeIndex = [
+            { x: -350 + offsetX, y: 0 },
+            { x: -335 + offsetX, y: -40 },
+            { x: -250 + offsetX, y: 0 },
+          ];
+          const ringVoxels = this.generateItemPositions(
+            LOGO_PATH_CONFIG,
+            18,
+            centerRingByStrokeIndex,
+            true
+          );
+
+          console.log("Generated ring voxels:", ringVoxels[0]);
+          const materials = [
+            this.blueMaterial,
+            this.blueMaterial,
+            this.darkMaterial,
           ];
 
-          zCubes.forEach((cubeData) => {
-            const cube = new THREE.Mesh(logoGeometry, this.meshMaterial);
-            const container = new THREE.Object3D();
-            container.position.set(
-              cubeData.x * logoSize,
-              cubeData.y * logoSize,
-              cubeData.z
-            );
-            container.scale.set(
-              cubeData.scale[0] * logoSize,
-              cubeData.scale[1] * logoSize,
-              cubeData.scale[2] * logoSize
-            );
-            container.add(cube);
-            this.logoContainer.add(container);
-          });
+          for (
+            let groupIndex = 0;
+            groupIndex < ringVoxels.length;
+            groupIndex++
+          ) {
+            const ringPositions =
+              ringVoxels[groupIndex % ringVoxels.length] || ringVoxels[0];
+            const material = materials[groupIndex % materials.length];
 
-          this.logoContainer.position.set(
-            this.logoPosition.x,
-            this.logoPosition.y,
-            this.logoPosition.z
-          );
-          this.logoCloudContainer.add(this.logoContainer);
+            for (let i = 0; i < ringPositions.length; i++) {
+              const ringPos = ringPositions[i % ringPositions.length];
+
+              const mesh = new THREE.Mesh(logoGeometry, material);
+              const container = new THREE.Object3D();
+              container.add(mesh);
+              container.position.set(ringPos.x, ringPos.y, ringPos.z);
+              this.logoContainer2.add(container);
+            }
+          }
+          this.logoContainer2.visible = false;
+
+          this.logoContainer2.rotation.set(0.5, 0, -0.1);
+
+          this.logoContainer2.position.set(0, 0, 0);
+          this.logoCloudContainer.add(this.logoContainer2);
+          this.logoContainer2.scale.setScalar(0.23);
 
           this.logoCloudContainer.scale.setScalar(0.38);
           this.logoOuterContainer.add(this.logoCloudContainer);
@@ -537,8 +554,6 @@
           this.spinPivot = new THREE.Object3D();
           this.logoOuterContainer = new THREE.Object3D();
 
-          this.boxGeometry = new THREE.BoxGeometry(0.75, 0.75, 0.75);
-
           this.scene.add(this.logoOuterContainer);
         }
 
@@ -568,7 +583,7 @@
 
           // Helper: Add voxel to stroke (2D, flat)
           const addVoxel = (x, y, strokeIndex) => {
-            const rangeLimit = 0.06;
+            const rangeLimit = 0.01;
             // const rangeLimit = 1;
             const vx = Math.round(x / voxelSize) * voxelSize;
             const vy = Math.round(y / voxelSize) * voxelSize;
@@ -760,6 +775,7 @@
         }
 
         onPhaseEnter(phase) {
+          console.log("Entering phase:", phase);
           // Reset phase-specific state if needed
           if (phase === "logo_extract") {
             // Ensure logo is visible at start of extract
@@ -772,22 +788,13 @@
 
         onPhaseComplete(phase) {
           // Clean up phase-specific state if needed
+          if (phase === "hold_logo") {
+            this.originalRods.forEach((rod) => {
+              rod.container.visible = false;
+              // rod.container.scale.set(0.1, 0.1, 0);
+            });
+          }
           if (phase === "logo_extract") {
-            // Hide 4th cloud completely
-
-            // Hide 4-cloud rods
-            if (this.fourCloudRods) {
-              this.fourCloudRods.forEach((rod) => {
-                rod.container.visible = false;
-                rod.container.scale.set(0.1, 0.1, 0);
-              });
-            }
-            // Reset logo
-            if (this.logoContainer) {
-              this.logoContainer.visible = false;
-              this.logoContainer.scale.setScalar(0);
-              this.logoContainer.rotation.y = 0;
-            }
             // Reset container rotation
             this.logoCloudContainer.rotation.y = 0;
             // Ensure original 3 clouds are at correct positions and visible
@@ -796,16 +803,6 @@
               cloud.position.set(pos.x, pos.y, pos.z);
               cloud.scale.setScalar(0.38);
               cloud.visible = true;
-            });
-            // Ensure original rods are visible
-            this.originalRods.forEach((rod) => {
-              rod.container.visible = true;
-              const targetLength = Math.sqrt(
-                Math.pow(rod.to.x - rod.from.x, 2) +
-                  Math.pow(rod.to.y - rod.from.y, 2) +
-                  Math.pow(rod.to.z - rod.from.z, 2)
-              );
-              rod.container.scale.set(0.1, 0.1, targetLength * 0.8);
             });
           }
         }
@@ -874,6 +871,9 @@
             case "spin_show_logo":
               this.handleSpinShowLogoPhase(phaseProgress, elapsed);
               break;
+            case "hold_logo":
+              this.handleHoldLogoPhase(phaseProgress, elapsed);
+              break;
             case "logo_extract":
               this.handleLogoExtractPhase(phaseProgress, elapsed);
               break;
@@ -901,6 +901,7 @@
 
         handleAppearPhase(elapsed, phaseTime, duration) {
           // Animate individual cubes/meshes appearing
+
           for (let i = 0; i < this.meshList.length; i++) {
             const item = this.meshList[i];
             if (item.isRod) continue; // Handle rods separately
@@ -1207,50 +1208,65 @@
           // Converge clouds to center (starting from pyramid positions)
           const convergeProgress = ease.cubicInOut(phaseProgress);
 
+          const currentCloudPositions = [];
           // Only handle first 3 clouds (no 4th cloud in this flow)
-          this.clouds.slice(0, 3).forEach((cloud, index) => {
+          this.clouds.slice(0, 4).forEach((cloud, index) => {
             const startPos = this.pyramidPositions[index]; // Start from pyramid position
             const targetPos = {
               x: lerp(startPos.x, this.logoPosition.x, convergeProgress),
               y: lerp(startPos.y, this.logoPosition.y, convergeProgress),
               z: lerp(startPos.z, this.logoPosition.z, convergeProgress),
             };
-
+            currentCloudPositions.push(targetPos);
             cloud.position.set(targetPos.x, targetPos.y, targetPos.z);
 
             // Scale down as they converge
             const scaleProgress = lerp(
               this.cloudScaleDefault,
-              0.1,
+              0,
               convergeProgress
             );
             cloud.scale.setScalar(scaleProgress);
           });
 
+          this.updateRodPosition(
+            this.originalRods[0],
+            currentCloudPositions[0],
+            currentCloudPositions[1]
+          );
+          // Rod 1: cloud 0 to cloud 2
+          this.updateRodPosition(
+            this.originalRods[1],
+            currentCloudPositions[0],
+            currentCloudPositions[2]
+          );
+          // Rod 2: cloud 1 to cloud 2
+          this.updateRodPosition(
+            this.originalRods[2],
+            currentCloudPositions[1],
+            currentCloudPositions[2]
+          );
+
+          // Rod 3: cloud 1 to cloud 2
+          this.updateRodPosition(
+            this.originalRods[3],
+            currentCloudPositions[0],
+            currentCloudPositions[3]
+          );
+          // Rod 4: cloud 1 to cloud 2
+          this.updateRodPosition(
+            this.originalRods[4],
+            currentCloudPositions[3],
+            currentCloudPositions[1]
+          );
+          // Rod 5: cloud 1 to cloud 2
+          this.updateRodPosition(
+            this.originalRods[5],
+            currentCloudPositions[3],
+            currentCloudPositions[2]
+          );
+
           // Hide rods as clouds converge
-          if (this.fourCloudRods) {
-            const rodHideProgress = fit(
-              phaseProgress,
-              0.3,
-              0.7,
-              1,
-              0,
-              ease.cubicInOut
-            );
-            this.fourCloudRods.forEach((rod) => {
-              rod.container.visible = rodHideProgress > 0.1;
-              const targetLength = Math.sqrt(
-                Math.pow(rod.to.x - rod.from.x, 2) +
-                  Math.pow(rod.to.y - rod.from.y, 2) +
-                  Math.pow(rod.to.z - rod.from.z, 2)
-              );
-              rod.container.scale.set(
-                0.1,
-                0.1,
-                targetLength * 0.8 * rodHideProgress
-              );
-            });
-          }
 
           // Show logo when clouds converge
           const logoAppearProgress = fit(
@@ -1261,18 +1277,16 @@
             1,
             ease.backOut
           );
-          this.logoContainer.visible = logoAppearProgress > 0;
-          this.logoContainer.scale.setScalar(logoAppearProgress);
-          this.logoContainer.rotation.y = elapsed * 0.5;
+          this.logoContainer2.visible = logoAppearProgress > 0;
+
+          this.logoContainer2.scale.setScalar(logoAppearProgress * 0.23);
         }
+        handleHoldLogoPhase(phaseProgress, elapsed) {}
 
         handleLogoExtractPhase(phaseProgress, elapsed) {
           // Logo rotates backwards
           const reverseSpinProgress = ease.expoInOut(phaseProgress);
-          this.logoContainer.rotation.y =
-            elapsed * 0.5 - reverseSpinProgress * Math.PI * 2;
 
-          // Logo scales down and disappears
           const logoDisappearProgress = fit(
             phaseProgress,
             0,
@@ -1281,33 +1295,8 @@
             0,
             ease.cubicIn
           );
-          this.logoContainer.scale.setScalar(logoDisappearProgress);
-          this.logoContainer.visible = logoDisappearProgress > 0.1;
-
-          // Hide 4-cloud rods early
-          if (this.fourCloudRods) {
-            const rodHideProgress = fit(
-              phaseProgress,
-              0.2,
-              0.5,
-              1,
-              0,
-              ease.cubicIn
-            );
-            this.fourCloudRods.forEach((rod) => {
-              rod.container.visible = rodHideProgress > 0.1;
-              const targetLength = Math.sqrt(
-                Math.pow(rod.to.x - rod.from.x, 2) +
-                  Math.pow(rod.to.y - rod.from.y, 2) +
-                  Math.pow(rod.to.z - rod.from.z, 2)
-              );
-              rod.container.scale.set(
-                0.1,
-                0.1,
-                targetLength * 0.8 * rodHideProgress
-              );
-            });
-          }
+          this.logoContainer2.scale.setScalar(logoDisappearProgress * 0.26);
+          this.logoContainer2.visible = logoDisappearProgress > 0.1;
 
           // Clouds reappear and move back to original positions (only first 3)
           const cloudReappearProgress = fit(
@@ -1318,6 +1307,8 @@
             1,
             ease.backOut
           );
+
+          const currentCloudPositions = [];
 
           this.clouds.slice(0, 3).forEach((cloud, index) => {
             const originalPos = this.originalCloudPositions[index];
@@ -1339,6 +1330,7 @@
                 cloudReappearProgress
               ),
             };
+            currentCloudPositions.push(currentPos);
 
             cloud.position.set(currentPos.x, currentPos.y, currentPos.z);
 
@@ -1351,41 +1343,27 @@
             cloud.rotation.y = elapsed * rotSpeed;
             cloud.rotation.x = Math.sin(elapsed * 0.5 + index) * 0.1;
           });
+          this.originalRods[0].container.visible = true;
+          this.originalRods[1].container.visible = true;
+          this.originalRods[2].container.visible = true;
 
-          // Show original rods
-          const rodShowProgress = fit(
-            phaseProgress,
-            0.5,
-            1,
-            0,
-            1,
-            ease.cubicOut
+          this.updateRodPosition(
+            this.originalRods[0],
+            currentCloudPositions[0],
+            currentCloudPositions[1]
           );
-          this.originalRods.forEach((rod, index) => {
-            rod.container.visible = rodShowProgress > 0.3;
-            const targetLength = Math.sqrt(
-              Math.pow(rod.to.x - rod.from.x, 2) +
-                Math.pow(rod.to.y - rod.from.y, 2) +
-                Math.pow(rod.to.z - rod.from.z, 2)
-            );
-            rod.container.scale.set(
-              0.1,
-              0.1,
-              targetLength * 0.8 * rodShowProgress
-            );
-          });
-
-          // Reset container rotation
-          const containerResetProgress = fit(
-            phaseProgress,
-            0.7,
-            1,
-            1,
-            0,
-            ease.expoInOut
+          // Rod 1: cloud 0 to cloud 2
+          this.updateRodPosition(
+            this.originalRods[1],
+            currentCloudPositions[0],
+            currentCloudPositions[2]
           );
-          this.logoCloudContainer.rotation.y =
-            -Math.PI * 2 * 2 * containerResetProgress;
+          // Rod 2: cloud 1 to cloud 2
+          this.updateRodPosition(
+            this.originalRods[2],
+            currentCloudPositions[1],
+            currentCloudPositions[2]
+          );
         }
 
         copyTexture() {
