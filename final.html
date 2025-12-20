@@ -1,0 +1,1472 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>3D Voxel Logo - Combined Spin & Logo Reveal</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap");
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        background: radial-gradient(
+          120% 120% at 20% 20%,
+          #111a2d 0%,
+          #0a0d14 55%,
+          #05070e 100%
+        );
+        color: #cfd7ff;
+        overflow: hidden;
+      }
+
+      .hero {
+        position: relative;
+        width: 100vw;
+        height: 100vh;
+      }
+
+      .canvas-container {
+        width: 100%;
+        height: 100%;
+      }
+
+      #voxelCanvas {
+        width: 100%;
+        height: 100%;
+        display: block;
+        cursor: crosshair;
+      }
+    </style>
+  </head>
+  <body>
+    <section class="hero">
+      <div class="canvas-container">
+        <canvas id="voxelCanvas"></canvas>
+      </div>
+    </section>
+
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+        }
+      }
+    </script>
+    <script src="./config.js"></script>
+
+    <script type="module">
+      import * as THREE from "three";
+
+      // Helper: create N identical cloud strokes (lets us grow to 4 clouds mid-animation)
+      const buildCloudPathConfig = (count) =>
+        Array.from({ length: count }, (_, idx) => ({
+          strokeIndex: idx,
+          segments: [...CLOUD_SHAPE],
+        }));
+
+      // ============================================
+      // Load symbols.png as ASCII Texture
+      // ============================================
+      function loadSymbolsTexture() {
+        return new Promise((resolve) => {
+          const loader = new THREE.TextureLoader();
+          loader.load(
+            "symbols.png",
+            (texture) => {
+              texture.minFilter = THREE.LinearFilter;
+              texture.magFilter = THREE.LinearFilter;
+              resolve({ texture, spriteCount: 10 });
+            },
+            undefined,
+            () => {
+              resolve(createFallbackTexture());
+            }
+          );
+        });
+      }
+
+      function createFallbackTexture() {
+        const chars = " .:-=+*#%@";
+        const charWidth = 50;
+        const charHeight = 84;
+        const canvas = document.createElement("canvas");
+        canvas.width = charWidth * chars.length;
+        canvas.height = charHeight;
+        const ctx = canvas.getContext("2d");
+
+        ctx.fillStyle = "#000";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.font = "bold 72px monospace";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillStyle = "#fff";
+
+        for (let i = 0; i < chars.length; i++) {
+          ctx.fillText(chars[i], charWidth * i + charWidth / 2, charHeight / 2);
+        }
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.minFilter = THREE.LinearFilter;
+        texture.magFilter = THREE.LinearFilter;
+        return { texture, spriteCount: chars.length };
+      }
+
+      // ============================================
+      // Voxel Logo Class - Combined Cloud → Logo story
+      // ============================================
+      class VoxelLogo {
+        constructor(canvas) {
+          this.canvas = canvas;
+          this.mouseX = 0;
+          this.mouseY = 0;
+          this.startTime = Date.now();
+          this.voxels = [];
+          this.appearType = "move";
+          this.extraCloudIndex = 3;
+          this.prevElapsed = 0;
+          this.smoothedCenter = new THREE.Vector3();
+          this.spinSmoothedY = 0;
+          this.morphBlend = 0;
+
+          // Palette tuned for stronger contrast
+          this.color = new THREE.Color("#475882");
+          this.bgColor = new THREE.Color("#0F131C");
+
+          // Storyboard phases
+          this.phases = [
+            "appear",
+            "cloud_idle",
+            "spin_add_cloud",
+            "hold_pyramid",
+            "spin_show_logo",
+            "logo_extract",
+          ];
+          this.loopStartIndex = 1; // Loop from cloud_idle (skip appear)
+          this.phaseIndex = 0;
+          this.phase = this.phases[this.phaseIndex];
+          this.phaseStartTime = 0;
+
+          // Timing (seconds) for each step
+          this.timing = {
+            appear: 2,
+            cloud_idle: 1,
+            spin_add_cloud: 2.5,
+            hold_pyramid: 3,
+            spin_show_logo: 3.0,
+            logo_extract: 3.0,
+          };
+
+          // Cloud positions
+          this.originalCloudPositions = [
+            { x: 0, y: 1.4, z: 0, scale: 1.6 }, // Top cloud (large)
+            { x: -1.6, y: -1.6, z: 0.6, scale: 1.1 }, // Bottom-left cloud
+            { x: 1.6, y: -0.8, z: -0.4, scale: 1.2 }, // Bottom-right cloud
+          ];
+          // this.originalCloudPositions = [
+          //   { x: 0, y: 1.4, z: 0, scale: 1.6 }, // Top cloud (large)
+          //   { x: -1.2, y: -0.5, z: -1.5, scale: 1.1 }, // Bottom-left cloud
+          //   { x: 1.2, y: -0.5, z: -1.5, scale: 1.2 }, // Bottom-right cloud
+          //   { x: 0, y: -0.5, z: 1, scale: 1.2 }, // Bottom-right cloud
+          // ];
+          this.originalCloudPositions = [
+            { x: 0, y: 1.4, z: 0, scale: 1.6 }, // Top cloud (large)
+            { x: -1.2, y: -0.5, z: 0.6, scale: 1.1 }, // Bottom-left cloud
+            { x: 1.2, y: -0.5, z: -0.4, scale: 1.2 }, // Bottom-right cloud
+            { x: 0, y: -0.5, z: 1, scale: 1.2 }, // Bottom-right cloud
+          ];
+          this.logoPosition = { x: 0, y: 0, z: 0 }; // Center position for logo
+          this.cloudScaleDefault = 0.5;
+
+          // Pyramid positions (for spin_add_cloud phase)
+          // Cloud 0 stays at top (apex), clouds 1 and 2 form base triangle
+          this.pyramidPositions = [
+            { x: 0, y: 1.4, z: 0, scale: 1.6 }, // Top cloud (large)
+            { x: -1.2, y: -0.5, z: 0.6, scale: 1.1 }, // Bottom-left cloud
+            { x: 1.2, y: -0.5, z: -0.4, scale: 1.2 }, // Bottom-right cloud
+            { x: 0, y: -0.5, z: 1, scale: 1.2 }, // Bottom-right cloud
+          ];
+
+          // Define use the old clouds
+          this.meshList = [];
+
+          // 4th cloud and logo tracking
+          this.logoContainer = null;
+          this.originalRods = []; // Store original 3 rods
+          this.fourCloudRods = []; // Store rods connecting 4 clouds
+
+          this.init();
+        }
+
+        async init() {
+          this.renderer = new THREE.WebGLRenderer({
+            canvas: this.canvas,
+            alpha: true,
+            antialias: false,
+          });
+
+          this.scene = new THREE.Scene();
+          this.camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 10);
+          this.camera.position.z = 5;
+          this.scene.add(this.camera);
+
+          this.lightPosition = new THREE.Vector3(2, 2, 2);
+
+          this.pixelScale = 2;
+          this.highRenderTarget = new THREE.WebGLRenderTarget(1, 1, {
+            minFilter: THREE.LinearFilter,
+            magFilter: THREE.LinearFilter,
+            depthBuffer: true,
+          });
+          this.lowRenderTarget = new THREE.WebGLRenderTarget(1, 1, {
+            minFilter: THREE.LinearFilter,
+            magFilter: THREE.LinearFilter,
+          });
+
+          const { texture, spriteCount } = await loadSymbolsTexture();
+          this.asciiTexture = texture;
+          this.spriteCount = spriteCount;
+
+          this.createMaterials();
+          this.createVoxelSystem();
+          this.createLogo();
+          this.createPostProcessing();
+          this.bindEvents();
+          this.resize();
+          this.onPhaseEnter(this.phase);
+          this.animate();
+        }
+
+        createMaterials() {
+          // Blue material for rings 1 & 2 (slightly emissive)
+          this.blueMaterial = new THREE.ShaderMaterial(
+            getBlueMaterialConfig(this.lightPosition, THREE.DoubleSide)
+          );
+
+          // Dark material for ring 3
+          this.darkMaterial = new THREE.ShaderMaterial(
+            getDarkMaterialConfig(this.lightPosition, THREE.DoubleSide)
+          );
+
+          this.rodMaterial = new THREE.ShaderMaterial(
+            getRodMaterialConfig(this.lightPosition)
+          );
+        }
+
+        createLogo() {
+          this.meshMaterial = new THREE.ShaderMaterial({
+            uniforms: {
+              u_lightPosition: { value: this.lightPosition },
+            },
+            vertexShader: `
+                        varying vec3 v_worldPosition;
+                        varying vec3 v_worldNormal;
+                        varying vec3 v_viewNormal;
+
+                        void main() {
+                            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                            v_viewNormal = normalMatrix * normal;
+                            v_worldNormal = normalize((vec4(v_viewNormal, 0.0) * viewMatrix).xyz);
+                            v_worldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
+                        }
+                    `,
+            fragmentShader: `
+                        uniform vec3 u_lightPosition;
+                        varying vec3 v_worldPosition;
+                        varying vec3 v_worldNormal;
+                        varying vec3 v_viewNormal;
+
+                        void main() {
+                            vec3 VN = normalize(v_viewNormal);
+                            vec3 N = normalize(v_worldNormal);
+                            vec3 L = normalize(u_lightPosition - v_worldPosition);
+
+                            float shade1 = max(0.0, dot(N, L)) / (length(u_lightPosition - v_worldPosition) * 0.5);
+                            float shade2 = max(0.0, dot(VN, vec3(0.5773)));
+                            gl_FragColor = vec4(shade1, shade2, 1.0, 1.0);
+                        }
+                    `,
+          });
+
+          this.logoCloudContainer = new THREE.Object3D();
+
+          const boxGeometry = new THREE.BoxGeometry(1, 1, 1);
+
+          this.clouds = [];
+          this.rods = [];
+          this.originalRods = [];
+
+          // Create initial 3 clouds
+          this.originalCloudPositions.forEach((pos, index) => {
+            const cloud = this.createCloud(boxGeometry, pos.scale, index);
+            cloud.position.set(pos.x, pos.y, pos.z);
+            this.logoCloudContainer.add(cloud);
+            this.clouds.push(cloud);
+            if (index === 3) {
+              cloud.visible = false;
+            }
+          });
+
+          // Create initial 3 rods connecting the 3 clouds
+          const rod1 = this.createRod(
+            this.originalCloudPositions[0],
+            this.originalCloudPositions[1],
+            boxGeometry
+          );
+          const rod2 = this.createRod(
+            this.originalCloudPositions[0],
+            this.originalCloudPositions[2],
+            boxGeometry
+          );
+          const rod3 = this.createRod(
+            this.originalCloudPositions[1],
+            this.originalCloudPositions[2],
+            boxGeometry
+          );
+          // rod for cloud 4
+          const rod4 = this.createRod(
+            this.originalCloudPositions[0],
+            this.originalCloudPositions[3],
+            boxGeometry
+          );
+          const rod5 = this.createRod(
+            this.originalCloudPositions[3],
+            this.originalCloudPositions[1],
+            boxGeometry
+          );
+          const rod6 = this.createRod(
+            this.originalCloudPositions[3],
+            this.originalCloudPositions[2],
+            boxGeometry
+          );
+
+          rod4.container.visible = false;
+          rod5.container.visible = false;
+          rod6.container.visible = false;
+
+          this.originalRods = [rod1, rod2, rod3, rod4, rod5, rod6];
+
+          // Create logo container (simple geometric shape - a cube with some detail)
+          this.logoContainer = new THREE.Object3D();
+          this.logoContainer.visible = false;
+
+          // Create a simple logo - a stylized "Z" or geometric shape
+          const logoGeometry = new THREE.BoxGeometry(1, 1, 1);
+          const logoSize = 0.8;
+
+          // Create a simple "Z" shape using cubes
+          const zCubes = [
+            { x: -0.5, y: 0.5, z: 0, scale: [1.2, 0.2, 0.2] }, // Top horizontal
+            { x: 0, y: 0, z: 0, scale: [0.2, 1.0, 0.2] }, // Diagonal (simplified as vertical)
+            { x: 0.5, y: -0.5, z: 0, scale: [1.2, 0.2, 0.2] }, // Bottom horizontal
+          ];
+
+          zCubes.forEach((cubeData) => {
+            const cube = new THREE.Mesh(logoGeometry, this.meshMaterial);
+            const container = new THREE.Object3D();
+            container.position.set(
+              cubeData.x * logoSize,
+              cubeData.y * logoSize,
+              cubeData.z
+            );
+            container.scale.set(
+              cubeData.scale[0] * logoSize,
+              cubeData.scale[1] * logoSize,
+              cubeData.scale[2] * logoSize
+            );
+            container.add(cube);
+            this.logoContainer.add(container);
+          });
+
+          this.logoContainer.position.set(
+            this.logoPosition.x,
+            this.logoPosition.y,
+            this.logoPosition.z
+          );
+          this.logoCloudContainer.add(this.logoContainer);
+
+          this.logoCloudContainer.scale.setScalar(0.38);
+          this.logoOuterContainer.add(this.logoCloudContainer);
+        }
+
+        createCloud(geometry, scale, cloudIndex) {
+          const cloud = new THREE.Object3D();
+
+          // Cloud shape: stacked layers creating isometric 3D cloud effect
+          // Layer configuration: [y-offset, cubes array with [x, z] positions]
+          const layers = [
+            // Bottom layer (darkest - back)
+            {
+              y: -0.4,
+              cubes: [
+                [-0.3, 0],
+                [0.3, 0],
+                [0, 0.3],
+                [0, -0.3],
+              ],
+            },
+            // Middle-back layer
+            {
+              y: -0.2,
+              cubes: [
+                [-0.5, 0],
+                [0.5, 0],
+                [0, 0],
+                [-0.25, 0.25],
+                [0.25, 0.25],
+                [-0.25, -0.25],
+                [0.25, -0.25],
+              ],
+            },
+            // Middle layer
+            {
+              y: 0,
+              cubes: [
+                [-0.6, 0],
+                [0.6, 0],
+                [0, 0],
+                [-0.3, 0],
+                [0.3, 0],
+                [0, 0.3],
+                [0, -0.3],
+                [-0.3, 0.3],
+                [0.3, 0.3],
+              ],
+            },
+            // Top layer (brightest - front)
+            {
+              y: 0.2,
+              cubes: [
+                [-0.4, 0],
+                [0.4, 0],
+                [0, 0],
+                [-0.2, 0.2],
+                [0.2, 0.2],
+              ],
+            },
+            // Peak
+            {
+              y: 0.4,
+              cubes: [
+                [0, 0],
+                [-0.2, 0],
+                [0.2, 0],
+              ],
+            },
+          ];
+
+          const cubeSize = 0.32 * scale;
+
+          layers.forEach((layer, layerIndex) => {
+            layer.cubes.forEach((cubePos, cubeIndex) => {
+              const container = new THREE.Object3D();
+              const mesh = new THREE.Mesh(geometry, this.meshMaterial);
+
+              container.position.set(
+                cubePos[0] * scale,
+                layer.y * scale,
+                cubePos[1] * scale
+              );
+              container.scale.setScalar(cubeSize);
+              container.add(mesh);
+              cloud.add(container);
+
+              this.meshList.push({
+                mesh,
+                cloudIndex,
+                layerIndex,
+                delay: cloudIndex * 0.3 + layerIndex * 0.05 + cubeIndex * 0.02,
+              });
+            });
+          });
+
+          return cloud;
+        }
+
+        createRod(from, to, geometry) {
+          // Calculate direction and length
+          const dx = to.x - from.x;
+          const dy = to.y - from.y;
+          const dz = to.z - from.z;
+          const length = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+          // Create rod mesh
+          const mesh = new THREE.Mesh(geometry, this.rodMaterial);
+          const container = new THREE.Object3D();
+
+          // Position at midpoint
+          container.position.set(
+            (from.x + to.x) / 2,
+            (from.y + to.y) / 2,
+            (from.z + to.z) / 2
+          );
+
+          // Scale to create VISIBLE rod (thicker)
+          container.scale.set(0.1, 0.1, length * 0.8);
+
+          // Rotate to point from -> to
+          container.lookAt(to.x, to.y, to.z);
+
+          container.add(mesh);
+          this.logoCloudContainer.add(container);
+
+          const rodData = {
+            mesh,
+            container,
+            delay: 1.5,
+            from: { x: from.x, y: from.y, z: from.z },
+            to: { x: to.x, y: to.y, z: to.z },
+          };
+
+          this.rods.push(rodData);
+          this.meshList.push({
+            mesh,
+            isRod: true,
+            delay: 1.5,
+          });
+
+          return rodData;
+        }
+
+        createVoxelSystem() {
+          this.logoContainer = new THREE.Object3D();
+          this.spinPivot = new THREE.Object3D();
+          this.logoOuterContainer = new THREE.Object3D();
+
+          this.boxGeometry = new THREE.BoxGeometry(0.75, 0.75, 0.75);
+
+          this.scene.add(this.logoOuterContainer);
+        }
+
+        generateItemPositions(
+          configs,
+          defaultScale = 12,
+          centerByStrokeIndex = [],
+          customZ = undefined
+        ) {
+          const strokeCount =
+            centerByStrokeIndex.length ||
+            Math.max(...configs.map((c) => c.strokeIndex)) + 1 ||
+            3;
+          const strokes = Array.from({ length: strokeCount }, () => []);
+          const voxelSize = 0.07;
+
+          // SVG viewBox: 0 0 826 547, center at ~413, 273
+          // Scale and transform SVG coords to our coordinate system
+          const svgWidth = 826;
+          const svgHeight = 547;
+          const scale = defaultScale / svgWidth; // Scale to fit in ~6 units
+          const offsetX = -svgWidth / 2;
+          const offsetY = -svgHeight / 2;
+
+          const transformX = (x) => (x + offsetX) * scale;
+          const transformY = (y) => -(y + offsetY) * scale; // Flip Y axis
+
+          // Helper: Add voxel to stroke (2D, flat)
+          const addVoxel = (x, y, strokeIndex) => {
+            const rangeLimit = 0.06;
+            // const rangeLimit = 1;
+            const vx = Math.round(x / voxelSize) * voxelSize;
+            const vy = Math.round(y / voxelSize) * voxelSize;
+
+            if (
+              !strokes[strokeIndex].some(
+                (p) =>
+                  Math.abs(p.x - vx) < rangeLimit &&
+                  Math.abs(p.y - vy) < rangeLimit
+              )
+            ) {
+              strokes[strokeIndex].push({
+                x: vx,
+                y: vy,
+                z: customZ ? (strokeIndex < 2 ? 3 : 2) : 2,
+                size: voxelSize,
+              });
+            }
+          };
+
+          // Helper: Generate cubic bezier curve
+          const generateCubicBezier = ({
+            c0,
+            c1,
+            c2,
+            c3,
+            strokeIndex,
+            segments = 10,
+          }) => {
+            const center = centerByStrokeIndex[strokeIndex] || { x: 0, y: 0 };
+            const p0 = {
+              x: transformX(c0.x + center.x),
+              y: transformY(c0.y + center.y),
+            };
+            const p1 = {
+              x: transformX(c1.x + center.x),
+              y: transformY(c1.y + center.y),
+            };
+            const p2 = {
+              x: transformX(c2.x + center.x),
+              y: transformY(c2.y + center.y),
+            };
+            const p3 = {
+              x: transformX(c3.x + center.x),
+              y: transformY(c3.y + center.y),
+            };
+
+            // addVoxel(0, 0, strokeIndex);
+
+            for (let i = 0; i <= segments; i++) {
+              const t = i / segments;
+              const pt = cubicBezier(p0, p1, p2, p3, t);
+
+              addVoxel(pt.x, pt.y, strokeIndex);
+            }
+            return { x: c3.x, y: c3.y };
+          };
+
+          // Helper: Generate line
+          const generateLine = (
+            fx0,
+            fy0,
+            fx1,
+            fy1,
+            strokeIndex,
+            segments = 6
+          ) => {
+            const center = centerByStrokeIndex[strokeIndex] || { x: 0, y: 0 };
+            const x0 = fx0 + center.x;
+            const y0 = fy0 + center.y;
+            const x1 = fx1 + center.x;
+            const y1 = fy1 + center.y;
+            for (let i = 0; i <= segments; i++) {
+              const t = i / segments;
+
+              addVoxel(
+                transformX(x0 + (x1 - x0) * t),
+                transformY(y0 + (y1 - y0) * t),
+                strokeIndex
+              );
+            }
+            return { x: x1, y: y1 };
+          };
+
+          // ============================================
+          // STROKE 0 (Blue): First path from SVG - Left C + Top bump + S-curve
+          // Path: M 550.50 431.65 C... (the complex blue shape)
+          // ============================================
+          let pos = null;
+
+          for (const stroke of configs) {
+            const { strokeIndex, segments } = stroke;
+
+            for (const seg of segments) {
+              if (seg.type === "cubic") {
+                pos = generateCubicBezier({
+                  c0: seg.c0,
+                  c1: seg.c1,
+                  c2: seg.c2,
+                  c3: seg.c3,
+                  strokeIndex,
+                  segments: seg.segments ?? 10, // default
+                });
+              }
+
+              if (seg.type === "line") {
+                generateLine(
+                  seg.from.x,
+                  seg.from.y,
+                  seg.to.x,
+                  seg.to.y,
+                  strokeIndex
+                );
+                pos = seg.to;
+              }
+            }
+          }
+
+          return strokes;
+        }
+
+        createPostProcessing() {
+          const quadGeometry = new THREE.PlaneGeometry(2, 2);
+
+          this.postMaterial = new THREE.ShaderMaterial({
+            uniforms: {
+              u_sceneTexture: { value: this.lowRenderTarget.texture },
+              u_sceneTextureSize: { value: new THREE.Vector2(1, 1) },
+              u_texture: { value: this.asciiTexture },
+              u_textureSpriteCount: { value: this.spriteCount },
+              u_bgColor: { value: this.bgColor },
+              u_color: { value: this.color },
+              u_mouseXY: { value: new THREE.Vector2(0, 0) },
+              u_resolution: { value: new THREE.Vector2(1, 1) },
+              u_brightness: { value: 1.8 },
+            },
+            vertexShader: `
+                              varying vec2 v_uv;
+                              void main() {
+                                  v_uv = uv;
+                                  gl_Position = vec4(position, 1.0);
+                              }
+                          `,
+            fragmentShader: `
+                              precision highp float;
+
+                              uniform sampler2D u_sceneTexture;
+                              uniform vec2 u_sceneTextureSize;
+                              uniform sampler2D u_texture;
+                              uniform float u_textureSpriteCount;
+                              uniform vec3 u_bgColor;
+                              uniform vec3 u_color;
+                              uniform vec2 u_mouseXY;
+                              uniform vec2 u_resolution;
+                              uniform float u_brightness;
+
+                              varying vec2 v_uv;
+
+                              void main() {
+                                  vec2 pixelXY = v_uv * u_sceneTextureSize;
+                                  vec2 uv = fract(pixelXY);
+
+                                  vec3 pixelRGB = texture2D(u_sceneTexture, floor(pixelXY) / u_sceneTextureSize).rgb;
+                                  float luma = max(pixelRGB.g, (1.0 - pixelRGB.b) * 0.5);
+
+                                  float spriteIndex = floor(min(u_textureSpriteCount * luma, u_textureSpriteCount - 1.0));
+
+
+                                  vec2 spriteUV = vec2((uv.x + spriteIndex) / u_textureSpriteCount, uv.y);
+
+                                  float sprite = texture2D(u_texture, spriteUV).g;
+
+                                  float dist = length(u_mouseXY - vec2(v_uv.x, 1.0 - v_uv.y) * u_resolution);
+                                  float distRatio = smoothstep(0.8, 0.0, dist / u_resolution.y) * pixelRGB.r;
+
+                                  vec2 fw = fwidth(uv);
+                                  sprite *= 1.0 - min(1.0, fw.x + fw.y);
+                                  sprite = smoothstep(0.0, 1.0, sprite * 1.8);
+
+                                  // BRIGHTER output
+                                  vec3 brightColor = u_color * u_brightness * (1.0 + distRatio * 3.0);
+                                  gl_FragColor = vec4(mix(u_bgColor, min(vec3(1.0), brightColor), sprite), 1.0);
+                              }
+                          `,
+            extensions: { derivatives: true },
+          });
+
+          this.postQuad = new THREE.Mesh(quadGeometry, this.postMaterial);
+        }
+
+        onPhaseEnter(phase) {
+          // Reset phase-specific state if needed
+          if (phase === "logo_extract") {
+            // Ensure logo is visible at start of extract
+            if (this.logoContainer) {
+              this.logoContainer.visible = true;
+              this.logoContainer.scale.setScalar(1);
+            }
+          }
+        }
+
+        onPhaseComplete(phase) {
+          // Clean up phase-specific state if needed
+          if (phase === "logo_extract") {
+            // Hide 4th cloud completely
+
+            // Hide 4-cloud rods
+            if (this.fourCloudRods) {
+              this.fourCloudRods.forEach((rod) => {
+                rod.container.visible = false;
+                rod.container.scale.set(0.1, 0.1, 0);
+              });
+            }
+            // Reset logo
+            if (this.logoContainer) {
+              this.logoContainer.visible = false;
+              this.logoContainer.scale.setScalar(0);
+              this.logoContainer.rotation.y = 0;
+            }
+            // Reset container rotation
+            this.logoCloudContainer.rotation.y = 0;
+            // Ensure original 3 clouds are at correct positions and visible
+            this.clouds.slice(0, 3).forEach((cloud, index) => {
+              const pos = this.originalCloudPositions[index];
+              cloud.position.set(pos.x, pos.y, pos.z);
+              cloud.scale.setScalar(0.38);
+              cloud.visible = true;
+            });
+            // Ensure original rods are visible
+            this.originalRods.forEach((rod) => {
+              rod.container.visible = true;
+              const targetLength = Math.sqrt(
+                Math.pow(rod.to.x - rod.from.x, 2) +
+                  Math.pow(rod.to.y - rod.from.y, 2) +
+                  Math.pow(rod.to.z - rod.from.z, 2)
+              );
+              rod.container.scale.set(0.1, 0.1, targetLength * 0.8);
+            });
+          }
+        }
+
+        updatePhase(elapsed) {
+          let phaseTime = elapsed - this.phaseStartTime;
+          const duration = this.timing[this.phase] || 1;
+
+          if (phaseTime >= duration) {
+            this.onPhaseComplete(this.phase);
+            this.phaseIndex += 1;
+            if (this.phaseIndex >= this.phases.length) {
+              this.phaseIndex = this.loopStartIndex;
+            }
+            this.phase = this.phases[this.phaseIndex];
+            this.phaseStartTime = elapsed;
+            this.onPhaseEnter(this.phase);
+            phaseTime = 0;
+          }
+
+          return { phaseTime, duration };
+        }
+
+        animate() {
+          requestAnimationFrame(() => this.animate());
+
+          const elapsed = (Date.now() - this.startTime) / 1000;
+
+          // Update phase timing
+          const { phaseTime, duration } = this.updatePhase(elapsed);
+          const phaseProgress = Math.min(1, phaseTime / duration);
+
+          // Update mouse uniforms
+          this.postMaterial.uniforms.u_mouseXY.value.set(
+            this.mouseX,
+            this.mouseY
+          );
+          this.postMaterial.uniforms.u_resolution.value.set(
+            this.domWidth,
+            this.domHeight
+          );
+
+          // Update light position based on mouse
+          const normalizedX = (this.mouseX / this.domWidth) * 2 - 1;
+          const normalizedY = 1 - (this.mouseY / this.domHeight) * 2;
+
+          const vec = new THREE.Vector3(normalizedX, normalizedY, 0.5);
+          vec.unproject(this.camera);
+          vec.z = 5;
+          this.lightPosition.copy(vec);
+
+          // Handle each phase
+          switch (this.phase) {
+            case "appear":
+              this.handleAppearPhase(elapsed, phaseTime, duration);
+              break;
+            case "cloud_idle":
+              this.handleCloudIdlePhase(elapsed);
+              break;
+            case "spin_add_cloud":
+              this.handleSpinAddCloudPhase(phaseProgress, elapsed);
+              break;
+            case "hold_pyramid":
+              this.handleHoldPyramidPhase(phaseProgress, elapsed);
+              break;
+            case "spin_show_logo":
+              this.handleSpinShowLogoPhase(phaseProgress, elapsed);
+              break;
+            case "logo_extract":
+              this.handleLogoExtractPhase(phaseProgress, elapsed);
+              break;
+          }
+
+          // Fixed outer container rotation (isometric view)
+          this.logoOuterContainer.rotation.set(-0.5, 0, 0.1);
+          this.logoOuterContainer.position.set(1.0, 0, 0);
+
+          // Render to high-res target
+          this.renderer.setRenderTarget(this.highRenderTarget);
+          this.renderer.setClearColor(0x000000, 1);
+          this.renderer.clear();
+          this.renderer.render(this.scene, this.camera);
+
+          // Copy to low-res target (pixelation)
+          this.copyTexture();
+
+          // Render final output with ASCII effect
+          this.renderer.setRenderTarget(null);
+          this.renderer.setClearColor(0x000000, 0);
+          this.renderer.clear();
+          this.renderer.render(this.postQuad, this.camera);
+        }
+
+        handleAppearPhase(elapsed, phaseTime, duration) {
+          // Animate individual cubes/meshes appearing
+          for (let i = 0; i < this.meshList.length; i++) {
+            const item = this.meshList[i];
+            if (item.isRod) continue; // Handle rods separately
+
+            const delay = (item.delay || i * 0.03) * 0.3;
+            const appearProgress = fit(
+              phaseTime,
+              delay,
+              delay + 0.4,
+              0,
+              1,
+              ease.backOut
+            );
+            item.mesh.scale.setScalar(appearProgress);
+          }
+
+          // Animate clouds appearing
+          this.clouds.slice(0, 4).forEach((cloud, index) => {
+            const dropDelay = index * 0.2;
+            const dropProgress = fit(
+              phaseTime,
+              dropDelay,
+              dropDelay + 0.6,
+              0,
+              1,
+              ease.backOut
+            );
+            cloud.scale.setScalar(dropProgress * this.cloudScaleDefault);
+
+            const rotSpeed = 0.3 + index * 0.15;
+            cloud.rotation.y = elapsed * rotSpeed;
+            cloud.rotation.x = Math.sin(elapsed * 0.5 + index) * 0.1;
+          });
+
+          // Ensure all meshes are visible
+          this.meshList.forEach((item) => {
+            if (!item.isRod) {
+              item.mesh.scale.setScalar(1);
+            }
+          });
+
+          // Animate rods appearing
+          this.originalRods.forEach((rod, index) => {
+            const rodDelay = 0.8 + index * 0.15;
+            const rodProgress = fit(
+              phaseTime,
+              rodDelay,
+              rodDelay + 0.4,
+              0,
+              1,
+              ease.cubicOut
+            );
+            const targetLength = Math.sqrt(
+              Math.pow(rod.to.x - rod.from.x, 2) +
+                Math.pow(rod.to.y - rod.from.y, 2) +
+                Math.pow(rod.to.z - rod.from.z, 2)
+            );
+            rod.container.scale.set(0.1, 0.1, targetLength * 0.8 * rodProgress);
+            rod.container.visible = rodProgress > 0 && index <= 2;
+          });
+        }
+
+        handleCloudIdlePhase(elapsed) {
+          // Clouds rotate in place
+          this.clouds.slice(0, 3).forEach((cloud, index) => {
+            cloud.scale.setScalar(this.cloudScaleDefault);
+            const rotSpeed = 0.3 + index * 0.15;
+            cloud.rotation.y = elapsed * rotSpeed;
+            cloud.rotation.x = Math.sin(elapsed * 0.5 + index) * 0.1;
+          });
+
+          // Ensure all meshes are visible
+          this.meshList.forEach((item) => {
+            if (!item.isRod) {
+              item.mesh.scale.setScalar(1);
+            }
+          });
+        }
+
+        updateRodPosition(rod, fromPos, toPos) {
+          // Update rod position and rotation based on current cloud positions
+          const dx = toPos.x - fromPos.x;
+          const dy = toPos.y - fromPos.y;
+          const dz = toPos.z - fromPos.z;
+          const length = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+          // Update position to midpoint
+          rod.container.position.set(
+            (fromPos.x + toPos.x) / 2,
+            (fromPos.y + toPos.y) / 2,
+            (fromPos.z + toPos.z) / 2
+          );
+
+          // Update scale (length)
+          rod.container.scale.set(0.1, 0.1, length * 0.8);
+
+          // Update rotation to point from -> to
+          // rod.container.lookAt(toPos.x, toPos.y, toPos.z);
+        }
+
+        handleSpinAddCloudPhase(phaseProgress, elapsed) {
+          // Phase breakdown:
+          // 0.0-0.4: 3 clouds rotate normally
+          // 0.4-0.6: 2 clouds (1 and 2) move towards cloud 0, rods move with them
+          // 0.6-0.8: Create cloud 4 at cloud 0 position, then clouds 1, 2, 4 expand (cloud 0 stays)
+          // 0.8-1.0: Rotate in place
+
+          // Always rotate container
+          const spinProgress = ease.expoInOut(phaseProgress);
+          this.logoCloudContainer.rotation.y = spinProgress * Math.PI * 2;
+
+          // Phase 1: 0.0-0.4 - Normal rotation
+          if (phaseProgress < 0.1) {
+            this.clouds.slice(0, 3).forEach((cloud, index) => {
+              const originalPos = this.originalCloudPositions[index];
+              cloud.position.set(originalPos.x, originalPos.y, originalPos.z);
+              cloud.scale.setScalar(this.cloudScaleDefault);
+              const rotSpeed = 0.3 + index * 0.15;
+              cloud.rotation.y = elapsed * rotSpeed;
+              cloud.rotation.x = Math.sin(elapsed * 0.5 + index) * 0.1;
+            });
+          }
+          // Phase 2: 0.4-0.6 - Move clouds 1 and 2 towards cloud 0, rods follow
+          else if (phaseProgress < 0.6) {
+            const moveProgress = fit(
+              phaseProgress,
+              0.4,
+              0.6,
+              0,
+              1,
+              ease.cubicInOut
+            );
+
+            // Cloud 0 stays at top
+            const cloud0Pos = this.originalCloudPositions[0];
+            this.clouds[0].position.set(cloud0Pos.x, cloud0Pos.y, cloud0Pos.z);
+            this.clouds[0].scale.setScalar(this.cloudScaleDefault);
+            this.clouds[0].rotation.y = elapsed * 0.3;
+            this.clouds[0].rotation.x = Math.sin(elapsed * 0.5) * 0.1;
+
+            // Store current positions for rod updates
+            const currentCloudPositions = [
+              { x: cloud0Pos.x, y: cloud0Pos.y, z: cloud0Pos.z },
+            ];
+            // Clouds 1 and 2 move towards cloud 0
+            this.clouds.slice(1, 3).forEach((cloud, idx) => {
+              const originalPos = this.originalCloudPositions[idx + 1];
+              const targetPos = this.originalCloudPositions[0]; // Move towards cloud 0
+
+              const currentPos = {
+                x: lerp(originalPos.x, targetPos.x, moveProgress),
+                y: lerp(originalPos.y, targetPos.y, moveProgress),
+                z: lerp(originalPos.z, targetPos.z, moveProgress),
+              };
+
+              cloud.position.set(currentPos.x, currentPos.y, currentPos.z);
+              cloud.scale.setScalar(this.cloudScaleDefault);
+              const rotSpeed = 0.45 + idx * 0.15;
+              cloud.rotation.y = elapsed * rotSpeed;
+              cloud.rotation.x = Math.sin(elapsed * 0.5 + idx + 1) * 0.1;
+
+              currentCloudPositions.push(currentPos);
+            });
+
+            // Update rods to follow clouds
+            // Rod 0: cloud 0 to cloud 1
+            this.updateRodPosition(
+              this.originalRods[0],
+              currentCloudPositions[0],
+              currentCloudPositions[1]
+            );
+            // Rod 1: cloud 0 to cloud 2
+            this.updateRodPosition(
+              this.originalRods[1],
+              currentCloudPositions[0],
+              currentCloudPositions[2]
+            );
+            // Rod 2: cloud 1 to cloud 2
+            this.updateRodPosition(
+              this.originalRods[2],
+              currentCloudPositions[1],
+              currentCloudPositions[2]
+            );
+          }
+          // Phase 3: 0.6-0.8 - Create cloud 4, then expand clouds 1, 2, 4
+          else if (phaseProgress < 0.8) {
+            const expandProgress = fit(
+              phaseProgress,
+              0.6,
+              0.8,
+              0,
+              1,
+              ease.backOut
+            );
+
+            const currentCloudPositions = [];
+            this.clouds.forEach((cloud, idx) => {
+              const rotSpeed = 0.45 + idx * 0.15;
+              cloud.rotation.y = elapsed * rotSpeed;
+              cloud.rotation.x = Math.sin(elapsed * 0.5 + idx + 1) * 0.1;
+              if (idx == 0) {
+                currentCloudPositions.push({
+                  x: this.originalCloudPositions[0].x,
+                  y: this.originalCloudPositions[0].y,
+                  z: this.originalCloudPositions[0].z,
+                });
+                return; // Only clouds 0,1,2 here
+              }
+              const cloudStartPos = this.originalCloudPositions[0];
+              const cloudEndPos = this.pyramidPositions[idx];
+              const cloudPos = {
+                x: lerp(cloudStartPos.x, cloudEndPos.x, expandProgress),
+                y: lerp(cloudStartPos.y, cloudEndPos.y, expandProgress),
+                z: lerp(cloudStartPos.z, cloudEndPos.z, expandProgress),
+              };
+              currentCloudPositions.push(cloudPos);
+              cloud.position.set(cloudPos.x, cloudPos.y, cloudPos.z);
+              cloud.scale.setScalar(this.cloudScaleDefault);
+              cloud.visible = true;
+              // this.clouds[idx].rotation.y = elapsed * 0.45;
+              // this.clouds[idx].rotation.x = Math.sin(elapsed * 0.5 + 1) * 0.1;
+            });
+
+            /// Update rods to follow clouds
+            // Rod 0: cloud 0 to cloud 1
+            this.updateRodPosition(
+              this.originalRods[0],
+              currentCloudPositions[0],
+              currentCloudPositions[1]
+            );
+            // Rod 1: cloud 0 to cloud 2
+            this.updateRodPosition(
+              this.originalRods[1],
+              currentCloudPositions[0],
+              currentCloudPositions[2]
+            );
+            // Rod 2: cloud 1 to cloud 2
+            this.updateRodPosition(
+              this.originalRods[2],
+              currentCloudPositions[1],
+              currentCloudPositions[2]
+            );
+
+            this.originalRods[3].container.visible = true;
+            this.originalRods[4].container.visible = true;
+            this.originalRods[5].container.visible = true;
+            // Rod 3: cloud 1 to cloud 2
+            this.updateRodPosition(
+              this.originalRods[3],
+              currentCloudPositions[0],
+              currentCloudPositions[3]
+            );
+            // Rod 4: cloud 1 to cloud 2
+            this.updateRodPosition(
+              this.originalRods[4],
+              currentCloudPositions[3],
+              currentCloudPositions[1]
+            );
+            // Rod 5: cloud 1 to cloud 2
+            this.updateRodPosition(
+              this.originalRods[5],
+              currentCloudPositions[3],
+              currentCloudPositions[2]
+            );
+          }
+          // Phase 4: 0.8-1.0 - Rotate in place (pyramid formed with 4 clouds)
+          else {
+            // Cloud 0 stays at top
+
+            this.clouds.forEach((cloud, idx) => {
+              const rotSpeed = 0.45 + idx * 0.15;
+              cloud.rotation.y = elapsed * rotSpeed;
+              cloud.rotation.x = Math.sin(elapsed * 0.5 + idx + 1) * 0.1;
+              const cloudEndPos = this.pyramidPositions[idx];
+
+              cloud.position.set(cloudEndPos.x, cloudEndPos.y, cloudEndPos.z);
+              cloud.scale.setScalar(this.cloudScaleDefault);
+              cloud.visible = true;
+            });
+          }
+        }
+
+        handleHoldPyramidPhase(phaseProgress, elapsed) {
+          this.clouds.forEach((cloud, idx) => {
+            const rotSpeed = 0.45 + idx * 0.15;
+            cloud.rotation.y = elapsed * rotSpeed;
+            cloud.rotation.x = Math.sin(elapsed * 0.5 + idx + 1) * 0.1;
+            const cloudEndPos = this.pyramidPositions[idx];
+
+            cloud.position.set(cloudEndPos.x, cloudEndPos.y, cloudEndPos.z);
+            cloud.scale.setScalar(this.cloudScaleDefault);
+            cloud.visible = true;
+          });
+          const spinProgress = ease.expoInOut(phaseProgress);
+          this.logoCloudContainer.rotation.y = spinProgress * Math.PI * 2;
+        }
+
+        handleSpinShowLogoPhase(phaseProgress, elapsed) {
+          // Continue rotation
+          const spinProgress = ease.expoInOut(phaseProgress);
+          this.logoCloudContainer.rotation.y =
+            -Math.PI * 2 - spinProgress * Math.PI * 2;
+
+          // Converge clouds to center (starting from pyramid positions)
+          const convergeProgress = ease.cubicInOut(phaseProgress);
+
+          // Only handle first 3 clouds (no 4th cloud in this flow)
+          this.clouds.slice(0, 3).forEach((cloud, index) => {
+            const startPos = this.pyramidPositions[index]; // Start from pyramid position
+            const targetPos = {
+              x: lerp(startPos.x, this.logoPosition.x, convergeProgress),
+              y: lerp(startPos.y, this.logoPosition.y, convergeProgress),
+              z: lerp(startPos.z, this.logoPosition.z, convergeProgress),
+            };
+
+            cloud.position.set(targetPos.x, targetPos.y, targetPos.z);
+
+            // Scale down as they converge
+            const scaleProgress = lerp(
+              this.cloudScaleDefault,
+              0.1,
+              convergeProgress
+            );
+            cloud.scale.setScalar(scaleProgress);
+          });
+
+          // Hide rods as clouds converge
+          if (this.fourCloudRods) {
+            const rodHideProgress = fit(
+              phaseProgress,
+              0.3,
+              0.7,
+              1,
+              0,
+              ease.cubicInOut
+            );
+            this.fourCloudRods.forEach((rod) => {
+              rod.container.visible = rodHideProgress > 0.1;
+              const targetLength = Math.sqrt(
+                Math.pow(rod.to.x - rod.from.x, 2) +
+                  Math.pow(rod.to.y - rod.from.y, 2) +
+                  Math.pow(rod.to.z - rod.from.z, 2)
+              );
+              rod.container.scale.set(
+                0.1,
+                0.1,
+                targetLength * 0.8 * rodHideProgress
+              );
+            });
+          }
+
+          // Show logo when clouds converge
+          const logoAppearProgress = fit(
+            phaseProgress,
+            0.6,
+            1,
+            0,
+            1,
+            ease.backOut
+          );
+          this.logoContainer.visible = logoAppearProgress > 0;
+          this.logoContainer.scale.setScalar(logoAppearProgress);
+          this.logoContainer.rotation.y = elapsed * 0.5;
+        }
+
+        handleLogoExtractPhase(phaseProgress, elapsed) {
+          // Logo rotates backwards
+          const reverseSpinProgress = ease.expoInOut(phaseProgress);
+          this.logoContainer.rotation.y =
+            elapsed * 0.5 - reverseSpinProgress * Math.PI * 2;
+
+          // Logo scales down and disappears
+          const logoDisappearProgress = fit(
+            phaseProgress,
+            0,
+            0.4,
+            1,
+            0,
+            ease.cubicIn
+          );
+          this.logoContainer.scale.setScalar(logoDisappearProgress);
+          this.logoContainer.visible = logoDisappearProgress > 0.1;
+
+          // Hide 4-cloud rods early
+          if (this.fourCloudRods) {
+            const rodHideProgress = fit(
+              phaseProgress,
+              0.2,
+              0.5,
+              1,
+              0,
+              ease.cubicIn
+            );
+            this.fourCloudRods.forEach((rod) => {
+              rod.container.visible = rodHideProgress > 0.1;
+              const targetLength = Math.sqrt(
+                Math.pow(rod.to.x - rod.from.x, 2) +
+                  Math.pow(rod.to.y - rod.from.y, 2) +
+                  Math.pow(rod.to.z - rod.from.z, 2)
+              );
+              rod.container.scale.set(
+                0.1,
+                0.1,
+                targetLength * 0.8 * rodHideProgress
+              );
+            });
+          }
+
+          // Clouds reappear and move back to original positions (only first 3)
+          const cloudReappearProgress = fit(
+            phaseProgress,
+            0.3,
+            1,
+            0,
+            1,
+            ease.backOut
+          );
+
+          this.clouds.slice(0, 3).forEach((cloud, index) => {
+            const originalPos = this.originalCloudPositions[index];
+
+            const currentPos = {
+              x: lerp(
+                this.logoPosition.x,
+                originalPos.x,
+                cloudReappearProgress
+              ),
+              y: lerp(
+                this.logoPosition.y,
+                originalPos.y,
+                cloudReappearProgress
+              ),
+              z: lerp(
+                this.logoPosition.z,
+                originalPos.z,
+                cloudReappearProgress
+              ),
+            };
+
+            cloud.position.set(currentPos.x, currentPos.y, currentPos.z);
+
+            // Scale back up
+            const scaleProgress = lerp(0.1, 0.38, cloudReappearProgress);
+            cloud.scale.setScalar(scaleProgress);
+
+            // Rotate in place
+            const rotSpeed = 0.3 + index * 0.15;
+            cloud.rotation.y = elapsed * rotSpeed;
+            cloud.rotation.x = Math.sin(elapsed * 0.5 + index) * 0.1;
+          });
+
+          // Show original rods
+          const rodShowProgress = fit(
+            phaseProgress,
+            0.5,
+            1,
+            0,
+            1,
+            ease.cubicOut
+          );
+          this.originalRods.forEach((rod, index) => {
+            rod.container.visible = rodShowProgress > 0.3;
+            const targetLength = Math.sqrt(
+              Math.pow(rod.to.x - rod.from.x, 2) +
+                Math.pow(rod.to.y - rod.from.y, 2) +
+                Math.pow(rod.to.z - rod.from.z, 2)
+            );
+            rod.container.scale.set(
+              0.1,
+              0.1,
+              targetLength * 0.8 * rodShowProgress
+            );
+          });
+
+          // Reset container rotation
+          const containerResetProgress = fit(
+            phaseProgress,
+            0.7,
+            1,
+            1,
+            0,
+            ease.expoInOut
+          );
+          this.logoCloudContainer.rotation.y =
+            -Math.PI * 2 * 2 * containerResetProgress;
+        }
+
+        copyTexture() {
+          const copyMaterial = new THREE.ShaderMaterial({
+            uniforms: { tDiffuse: { value: this.highRenderTarget.texture } },
+            vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position, 1.0); }`,
+            fragmentShader: `uniform sampler2D tDiffuse; varying vec2 vUv; void main() { gl_FragColor = texture2D(tDiffuse, vUv); }`,
+          });
+
+          const copyQuad = new THREE.Mesh(
+            new THREE.PlaneGeometry(2, 2),
+            copyMaterial
+          );
+          this.renderer.setRenderTarget(this.lowRenderTarget);
+          this.renderer.render(copyQuad, this.camera);
+          copyMaterial.dispose();
+          copyQuad.geometry.dispose();
+        }
+
+        bindEvents() {
+          window.addEventListener("resize", () => this.resize());
+
+          this.canvas.addEventListener("mousemove", (e) => {
+            const rect = this.canvas.getBoundingClientRect();
+            this.mouseX = e.clientX - rect.left;
+            this.mouseY = e.clientY - rect.top;
+          });
+
+          this.canvas.addEventListener("mouseleave", () => {
+            this.mouseX = this.domWidth / 2;
+            this.mouseY = this.domHeight / 2;
+          });
+        }
+
+        resize() {
+          const rect = this.canvas.getBoundingClientRect();
+          const width = rect.width;
+          const height = rect.height;
+
+          this.domWidth = width;
+          this.domHeight = height;
+
+          const pixelSize = fit(height, 400, 1000, 12, 20);
+
+          const pixelHeight = Math.ceil(height / pixelSize);
+          const pixelWidth = Math.ceil(width / ((pixelSize * 50) / 84));
+          this.lowRenderTarget.setSize(
+            pixelWidth * this.pixelScale,
+            pixelHeight * this.pixelScale
+          );
+          this.highRenderTarget.setSize(
+            pixelWidth * this.pixelScale,
+            pixelHeight * this.pixelScale
+          );
+          this.postMaterial.uniforms.u_sceneTextureSize.value.set(
+            pixelWidth,
+            pixelHeight
+          );
+
+          const dpr = Math.min(window.devicePixelRatio, 2);
+          this.renderer.setSize(width * dpr, height * dpr, false);
+          this.canvas.style.width = `${width}px`;
+          this.canvas.style.height = `${height}px`;
+
+          const aspect = width / height;
+          this.camera.left = -aspect;
+          this.camera.right = aspect;
+          this.camera.updateProjectionMatrix();
+
+          this.mouseX = width / 2;
+          this.mouseY = height / 2;
+        }
+      }
+
+      // Initialize
+      document.addEventListener("DOMContentLoaded", () => {
+        document.fonts.ready.then(() => {
+          const canvas = document.getElementById("voxelCanvas");
+          new VoxelLogo(canvas);
+        });
+      });
+    </script>
+  </body>
+</html>

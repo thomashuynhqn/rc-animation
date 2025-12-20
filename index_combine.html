@@ -185,6 +185,9 @@
             hold_clouds: 4.0,
           };
 
+          // Define use the old clouds
+          this.meshList = [];
+
           this.init();
         }
 
@@ -219,11 +222,13 @@
 
           this.createMaterials();
           this.createVoxelSystem();
+          this.createLogo();
           this.createPostProcessing();
           this.bindEvents();
           this.resize();
           this.onPhaseEnter(this.phase);
-          this.animate();
+          // this.animate();
+          this.animate2();
         }
 
         createMaterials() {
@@ -242,6 +247,204 @@
           );
         }
 
+        createLogo() {
+          this.meshMaterial = new THREE.ShaderMaterial({
+            uniforms: {
+              u_lightPosition: { value: this.lightPosition },
+            },
+            vertexShader: `
+                        varying vec3 v_worldPosition;
+                        varying vec3 v_worldNormal;
+                        varying vec3 v_viewNormal;
+                        
+                        void main() {
+                            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                            v_viewNormal = normalMatrix * normal;
+                            v_worldNormal = normalize((vec4(v_viewNormal, 0.0) * viewMatrix).xyz);
+                            v_worldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
+                        }
+                    `,
+            fragmentShader: `
+                        uniform vec3 u_lightPosition;
+                        varying vec3 v_worldPosition;
+                        varying vec3 v_worldNormal;
+                        varying vec3 v_viewNormal;
+                        
+                        void main() {
+                            vec3 VN = normalize(v_viewNormal);
+                            vec3 N = normalize(v_worldNormal);
+                            vec3 L = normalize(u_lightPosition - v_worldPosition);
+                            
+                            float shade1 = max(0.0, dot(N, L)) / (length(u_lightPosition - v_worldPosition) * 0.5);
+                            float shade2 = max(0.0, dot(VN, vec3(0.5773)));
+                            gl_FragColor = vec4(shade1, shade2, 1.0, 1.0);
+                        }
+                    `,
+          });
+
+          this.logoCloudContainer = new THREE.Object3D();
+
+          const boxGeometry = new THREE.BoxGeometry(1, 1, 1);
+          const cloudPositions = [
+            { x: 0, y: 1.4, z: 0, scale: 1.6 }, // Top cloud (large)
+            { x: -1.6, y: -1.6, z: 0.6, scale: 1.1 }, // Bottom-left cloud (LOWER)
+            { x: 1.6, y: -0.8, z: -0.4, scale: 1.2 }, // Bottom-right cloud
+          ];
+
+          this.clouds = [];
+          this.rods = [];
+
+          cloudPositions.forEach((pos, index) => {
+            const cloud = this.createCloud(boxGeometry, pos.scale, index);
+            cloud.position.set(pos.x, pos.y, pos.z);
+            this.logoCloudContainer.add(cloud);
+            this.clouds.push(cloud);
+          });
+
+          // Create connecting rods between clouds
+          this.createRod(cloudPositions[0], cloudPositions[1], boxGeometry); // Top to Bottom-left
+          this.createRod(cloudPositions[0], cloudPositions[2], boxGeometry); // Top to Bottom-right
+          this.createRod(cloudPositions[1], cloudPositions[2], boxGeometry); // Bottom-left to Bottom-right
+
+          this.logoCloudContainer.scale.setScalar(0.38);
+          this.logoOuterContainer.add(this.logoCloudContainer);
+        }
+
+        createCloud(geometry, scale, cloudIndex) {
+          const cloud = new THREE.Object3D();
+
+          // Cloud shape: stacked layers creating isometric 3D cloud effect
+          // Layer configuration: [y-offset, cubes array with [x, z] positions]
+          const layers = [
+            // Bottom layer (darkest - back)
+            {
+              y: -0.4,
+              cubes: [
+                [-0.3, 0],
+                [0.3, 0],
+                [0, 0.3],
+                [0, -0.3],
+              ],
+            },
+            // Middle-back layer
+            {
+              y: -0.2,
+              cubes: [
+                [-0.5, 0],
+                [0.5, 0],
+                [0, 0],
+                [-0.25, 0.25],
+                [0.25, 0.25],
+                [-0.25, -0.25],
+                [0.25, -0.25],
+              ],
+            },
+            // Middle layer
+            {
+              y: 0,
+              cubes: [
+                [-0.6, 0],
+                [0.6, 0],
+                [0, 0],
+                [-0.3, 0],
+                [0.3, 0],
+                [0, 0.3],
+                [0, -0.3],
+                [-0.3, 0.3],
+                [0.3, 0.3],
+              ],
+            },
+            // Top layer (brightest - front)
+            {
+              y: 0.2,
+              cubes: [
+                [-0.4, 0],
+                [0.4, 0],
+                [0, 0],
+                [-0.2, 0.2],
+                [0.2, 0.2],
+              ],
+            },
+            // Peak
+            {
+              y: 0.4,
+              cubes: [
+                [0, 0],
+                [-0.2, 0],
+                [0.2, 0],
+              ],
+            },
+          ];
+
+          const cubeSize = 0.32 * scale;
+
+          layers.forEach((layer, layerIndex) => {
+            layer.cubes.forEach((cubePos, cubeIndex) => {
+              const container = new THREE.Object3D();
+              const mesh = new THREE.Mesh(geometry, this.meshMaterial);
+
+              container.position.set(
+                cubePos[0] * scale,
+                layer.y * scale,
+                cubePos[1] * scale
+              );
+              container.scale.setScalar(cubeSize);
+              container.add(mesh);
+              cloud.add(container);
+
+              this.meshList.push({
+                mesh,
+                cloudIndex,
+                layerIndex,
+                delay: cloudIndex * 0.3 + layerIndex * 0.05 + cubeIndex * 0.02,
+              });
+            });
+          });
+
+          return cloud;
+        }
+
+        createRod(from, to, geometry) {
+          const rod = new THREE.Object3D();
+
+          // Calculate direction and length
+          const dx = to.x - from.x;
+          const dy = to.y - from.y;
+          const dz = to.z - from.z;
+          const length = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+          // Create rod mesh
+          const mesh = new THREE.Mesh(geometry, this.rodMaterial);
+          const container = new THREE.Object3D();
+
+          // Position at midpoint
+          container.position.set(
+            (from.x + to.x) / 2,
+            (from.y + to.y) / 2,
+            (from.z + to.z) / 2
+          );
+
+          // Scale to create VISIBLE rod (thicker)
+          container.scale.set(0.1, 0.1, length * 0.8);
+
+          // Rotate to point from -> to
+          container.lookAt(to.x, to.y, to.z);
+
+          container.add(mesh);
+          this.logoCloudContainer.add(container);
+
+          this.rods.push({
+            mesh,
+            container,
+            delay: 1.5,
+          });
+          this.meshList.push({
+            mesh,
+            isRod: true,
+            delay: 1.5,
+          });
+        }
+
         createVoxelSystem() {
           this.logoContainer = new THREE.Object3D();
           this.spinPivot = new THREE.Object3D();
@@ -250,142 +453,133 @@
           this.boxGeometry = new THREE.BoxGeometry(0.75, 0.75, 0.75);
 
           // Generate positions for 3 interlocking rings (logo form)
-          const offsetX = 380;
+          // const offsetX = 380;
 
-          this.pivotOffset = { x: 0.61, y: 0, z: 0 };
+          // this.pivotOffset = { x: 0.61, y: 0, z: 0 };
 
-          const centerRingByStrokeIndex = [
-            { x: -100 + offsetX, y: 0 },
-            { x: -85 + offsetX, y: -40 },
-            { x: 0 + offsetX, y: 0 },
-          ];
-          const ringVoxels = this.generateItemPositions(
-            LOGO_PATH_CONFIG,
-            12,
-            centerRingByStrokeIndex,
-            true
-          );
+          // const centerRingByStrokeIndex = [
+          //   { x: -100 + offsetX, y: 0 },
+          //   { x: -85 + offsetX, y: -40 },
+          //   { x: 0 + offsetX, y: 0 },
+          // ];
+          // const ringVoxels = this.generateItemPositions(
+          //   LOGO_PATH_CONFIG,
+          //   12,
+          //   centerRingByStrokeIndex,
+          //   true
+          // );
 
-          // Generate positions for 4 clouds (3 base + 1 that fades in during spin)
-          const spread = 3;
-          // Adjust these anchors to shift each cloud (laid out as a rhombus; last entry = bonus cloud)
-          const cloudCenters = [
-            { x: 220, y: -150 }, // top (pull in from edge)
-            { x: 50, y: 30 }, // left
-            { x: 400, y: 30 }, // right
-            { x: 220, y: 180 }, // bottom (appears when we add the 4th cloud)
-          ];
-          const scaledCloudCenters = cloudCenters.map((p) => ({
-            x: p.x * spread,
-            y: p.y * spread,
-          }));
+          // // Generate positions for 4 clouds (3 base + 1 that fades in during spin)
+          // const spread = 3;
+          // // Adjust these anchors to shift each cloud (laid out as a rhombus; last entry = bonus cloud)
+          // const cloudCenters = [
+          //   { x: 220, y: -150 }, // top (pull in from edge)
+          //   { x: 50, y: 30 }, // left
+          //   { x: 400, y: 30 }, // right
+          //   { x: 220, y: 180 }, // bottom (appears when we add the 4th cloud)
+          // ];
+          // const scaledCloudCenters = cloudCenters.map((p) => ({
+          //   x: p.x * spread,
+          //   y: p.y * spread,
+          // }));
 
-          // const cloudVoxels = [];
+          // // const cloudVoxels = [];
 
-          const cloudVoxels = this.generateItemPositions(
-            buildCloudPathConfig(scaledCloudCenters.length),
-            5.8,
-            scaledCloudCenters
-          );
-          cloudVoxels.forEach((cloud, cloudIndex) => {
-            cloud.forEach((point) => {
-              console.log(point);
-              point.x = point.x - this.pivotOffset.x / (1 * 0.175);
-              point.y = point.y - this.pivotOffset.y / (1 * 0.175);
-              point.z = point.z - this.pivotOffset.z / (1 * 0.175);
-            });
-          });
+          // const cloudVoxels = this.generateItemPositions(
+          //   buildCloudPathConfig(scaledCloudCenters.length),
+          //   5.8,
+          //   scaledCloudCenters
+          // );
+          // cloudVoxels.forEach((cloud, cloudIndex) => {
+          //   cloud.forEach((point) => {
+          //     point.x = point.x - this.pivotOffset.x / (1 * 0.175);
+          //     point.y = point.y - this.pivotOffset.y / (1 * 0.175);
+          //     point.z = point.z - this.pivotOffset.z / (1 * 0.175);
+          //   });
+          // });
 
-          console.log("Generated logo voxels:", cloudVoxels);
+          // // Base anchors for rods and spinning - compute first for rod positioning
+          // this.cloudAnchors = cloudVoxels.map((points) =>
+          //   this.computeAnchor(points)
+          // );
 
-          // Base anchors for rods and spinning - compute first for rod positioning
-          this.cloudAnchors = cloudVoxels.map((points) =>
-            this.computeAnchor(points)
-          );
+          // // Create rods connecting cloud centers for maximum visibility
+          // this.connectRods = [];
 
-          // Create rods connecting cloud centers for maximum visibility
-          this.rods = [];
+          // this.createConnectRod(cloudVoxels[0][35], cloudVoxels[1][80]); // Top to Left
+          // this.createConnectRod(cloudVoxels[0][9], cloudVoxels[2][80]); // Top to Right
+          // this.createConnectRod(cloudVoxels[1][10], cloudVoxels[2][30]); // Left to Right
 
-          this.createRod(cloudVoxels[0][35], cloudVoxels[1][80]); // Top to Left
-          this.createRod(cloudVoxels[0][9], cloudVoxels[2][80]); // Top to Right
-          this.createRod(cloudVoxels[1][10], cloudVoxels[2][30]); // Left to Right
+          // // Extra rods when 4th cloud appears
+          // // this.createRod(cloudVoxels[1][20], cloudVoxels[3][45]); // Left to bottom
+          // // this.createRod(cloudVoxels[2][20], cloudVoxels[3][102]); // Right to bottom
 
-          // Extra rods when 4th cloud appears
-          // this.createRod(cloudVoxels[1][20], cloudVoxels[3][45]); // Left to bottom
-          // this.createRod(cloudVoxels[2][20], cloudVoxels[3][102]); // Right to bottom
+          // this.ringAnchors = ringVoxels.map((points) =>
+          //   this.computeAnchor(points)
+          // );
+          // // Map the 4th cloud to the first ring when morphing
+          // this.ringAnchors.push(this.ringAnchors[0].clone());
 
-          this.ringAnchors = ringVoxels.map((points) =>
-            this.computeAnchor(points)
-          );
-          // Map the 4th cloud to the first ring when morphing
-          this.ringAnchors.push(this.ringAnchors[0].clone());
+          // // Create voxel objects with both cloud and ring positions
+          // const materials = [
+          //   this.blueMaterial,
+          //   this.blueMaterial,
+          //   this.blueMaterial,
+          //   this.darkMaterial,
+          // ];
 
-          // Create voxel objects with both cloud and ring positions
-          const materials = [
-            this.blueMaterial,
-            this.blueMaterial,
-            this.blueMaterial,
-            this.darkMaterial,
-          ];
+          // const groupCount = cloudVoxels.length;
+          // for (let groupIndex = 0; groupIndex < groupCount; groupIndex++) {
+          //   const ringPositions =
+          //     ringVoxels[groupIndex % ringVoxels.length] || ringVoxels[0];
+          //   const cloudPositions = cloudVoxels[groupIndex];
+          //   const material = materials[groupIndex % materials.length];
 
-          const groupCount = cloudVoxels.length;
-          for (let groupIndex = 0; groupIndex < groupCount; groupIndex++) {
-            const ringPositions =
-              ringVoxels[groupIndex % ringVoxels.length] || ringVoxels[0];
-            const cloudPositions = cloudVoxels[groupIndex];
-            const material = materials[groupIndex % materials.length];
+          //   const maxCount = Math.max(
+          //     ringPositions.length,
+          //     cloudPositions.length
+          //   );
 
-            const maxCount = Math.max(
-              ringPositions.length,
-              cloudPositions.length
-            );
+          //   for (let i = 0; i < maxCount; i++) {
+          //     const ringPos = ringPositions[i % ringPositions.length];
+          //     const cloudPos = cloudPositions[i % cloudPositions.length];
 
-            console.log(
-              `Creating voxel group ${groupIndex}:`,
-              maxCount,
-              "voxels"
-            );
+          //     const defaultCloudPos = cloudPositions[0];
 
-            for (let i = 0; i < maxCount; i++) {
-              const ringPos = ringPositions[i % ringPositions.length];
-              const cloudPos = cloudPositions[i % cloudPositions.length];
+          //     const mesh = new THREE.Mesh(this.boxGeometry, material);
+          //     const container = new THREE.Object3D();
+          //     container.add(mesh);
+          //     this.logoContainer.add(container);
 
-              const defaultCloudPos = cloudPositions[0];
+          //     this.voxels.push({
+          //       container,
+          //       mesh,
+          //       groupIndex,
+          //       cloudPos: { ...cloudPos },
+          //       ringPos: { ...ringPos },
+          //       currentPos: { ...cloudPos },
+          //       startPos: { ...defaultCloudPos },
+          //       scale: 0,
+          //       // delay: groupIndex * 0.25 + i * 0.01,
+          //       delay: groupIndex == 0 || groupIndex == 3 ? 0 : 0.25,
+          //     });
+          //   }
+          // }
 
-              const mesh = new THREE.Mesh(this.boxGeometry, material);
-              const container = new THREE.Object3D();
-              container.add(mesh);
-              this.logoContainer.add(container);
+          // this.spinPivot.position.set(
+          //   this.pivotOffset.x,
+          //   this.pivotOffset.y,
+          //   this.pivotOffset.z
+          // );
 
-              this.voxels.push({
-                container,
-                mesh,
-                groupIndex,
-                cloudPos: { ...cloudPos },
-                ringPos: { ...ringPos },
-                currentPos: { ...cloudPos },
-                startPos: { ...defaultCloudPos },
-                scale: 0,
-                // delay: groupIndex * 0.25 + i * 0.01,
-                delay: groupIndex == 0 || groupIndex == 3 ? 0 : 0.25,
-              });
-            }
-          }
+          // this.logoContainer.scale.setScalar(0.175);
 
-          this.spinPivot.position.set(
-            this.pivotOffset.x,
-            this.pivotOffset.y,
-            this.pivotOffset.z
-          );
-
-          this.logoContainer.scale.setScalar(0.175);
-
-          this.spinPivot.add(this.logoContainer);
-          this.logoOuterContainer.add(this.spinPivot);
+          // this.spinPivot.add(this.logoContainer);
+          // this.logoOuterContainer.add(this.spinPivot);
           this.scene.add(this.logoOuterContainer);
         }
 
-        createRod(from, to) {
+        createConnectRod(from, to) {
           // Calculate direction and length with fallback for z
           const fromZ = from.z !== undefined ? from.z : 1;
           const toZ = to.z !== undefined ? to.z : 1;
@@ -418,7 +612,7 @@
           container.add(mesh);
           this.logoContainer.add(container);
 
-          this.rods.push({
+          this.connectRods.push({
             mesh,
             container,
             delay: 1.5 * 0.45,
@@ -818,7 +1012,7 @@
           );
 
           if (this.phase === "appear") {
-            this.rods.forEach((rod) => {
+            this.connectRods.forEach((rod) => {
               const rodTime = phaseTime - rod.delay;
 
               const appearProgress = Math.max(
@@ -938,6 +1132,102 @@
 
           this.copyTexture();
 
+          this.renderer.setRenderTarget(null);
+          this.renderer.setClearColor(0x000000, 0);
+          this.renderer.clear();
+          this.renderer.render(this.postQuad, this.camera);
+        }
+
+        animate2() {
+          requestAnimationFrame(() => this.animate2());
+
+          const elapsed = (Date.now() - this.startTime) / 1000;
+          const t = elapsed * 0.6; // Animation speed
+
+          // Update mouse uniforms
+          this.postMaterial.uniforms.u_mouseXY.value.set(
+            this.mouseX,
+            this.mouseY
+          );
+          this.postMaterial.uniforms.u_resolution.value.set(
+            this.domWidth,
+            this.domHeight
+          );
+
+          // Update light position based on mouse
+          const normalizedX = (this.mouseX / this.domWidth) * 2 - 1;
+          const normalizedY = 1 - (this.mouseY / this.domHeight) * 2;
+
+          const vec = new THREE.Vector3(normalizedX, normalizedY, 0.5);
+          vec.unproject(this.camera);
+          vec.z = 5;
+          this.lightPosition.copy(vec);
+
+          // Animate individual cubes/meshes - FASTER appearance
+          for (let i = 0; i < this.meshList.length; i++) {
+            const item = this.meshList[i];
+            const delay = (item.delay || i * 0.03) * 0.3; // 3x faster
+            const scale = fit(t, delay, delay + 0.2, 0, 1, ease.backOut);
+            item.mesh.scale.setScalar(scale);
+          }
+
+          // Clouds appear FAST and ROTATE in place
+          if (this.clouds) {
+            this.clouds.forEach((cloud, index) => {
+              // FASTER drop-in animation
+              const dropDelay = index * 0.15;
+              const dropProgress = fit(
+                t,
+                dropDelay,
+                dropDelay + 0.4,
+                0,
+                1,
+                ease.backOut
+              );
+              cloud.scale.setScalar(dropProgress);
+
+              // Self-rotation - each cloud rotates at different speed
+              const rotSpeed = 0.3 + index * 0.15;
+              cloud.rotation.y = elapsed * rotSpeed;
+
+              // Slight tilt variation
+              cloud.rotation.x = Math.sin(elapsed * 0.5 + index) * 0.1;
+            });
+          }
+
+          // Occasional container full rotation (every 8 seconds)
+          const rotationCycle = 8; // seconds
+          const cycleProgress = (elapsed % rotationCycle) / rotationCycle;
+
+          // Rotate smoothly during middle portion of cycle
+          let containerRotation = 0;
+          if (cycleProgress > 0.3 && cycleProgress < 0.7) {
+            // Map 0.3-0.7 to 0-1, then to 0-2π
+            const rotProgress = (cycleProgress - 0.3) / 0.4;
+            containerRotation = ease.cubicInOut(rotProgress) * Math.PI * 2;
+          } else if (cycleProgress >= 0.7) {
+            containerRotation = Math.PI * 2; // Hold at full rotation briefly
+          }
+
+          this.logoCloudContainer.rotation.y = containerRotation;
+
+          // Fixed scale
+          this.logoCloudContainer.scale.setScalar(0.38);
+
+          // Fixed outer container rotation (isometric view) - shifted MORE RIGHT
+          this.logoOuterContainer.rotation.set(-0.5, Math.PI * 0.2, 0.1);
+          this.logoOuterContainer.position.set(1.0, 0, 0);
+
+          // Render to high-res target
+          this.renderer.setRenderTarget(this.highRenderTarget);
+          this.renderer.setClearColor(0x000000, 1);
+          this.renderer.clear();
+          this.renderer.render(this.scene, this.camera);
+
+          // Copy to low-res target (pixelation)
+          this.copyTexture();
+
+          // Render final output with ASCII effect
           this.renderer.setRenderTarget(null);
           this.renderer.setClearColor(0x000000, 0);
           this.renderer.clear();
